@@ -43,7 +43,7 @@
   .cal-head{display:flex;align-items:center;gap:12px;row-gap:8px;flex-wrap:wrap;margin-bottom:10px}
   .btn{white-space:nowrap}
   .cal-head .title{font-size:17px;font-weight:700;min-width:140px;text-align:center}
-  table.cal{width:100%;border-collapse:collapse;table-layout:fixed}
+  table.cal{width:100%;border-collapse:collapse;table-layout:fixed;touch-action:pan-y;will-change:transform}
   html[data-cells="card"] table.cal{border-collapse:separate;border-spacing:var(--cellgap)}
   html[data-cells="card"] table.cal td{border-radius:var(--rsm);background:var(--panel2)}
   html[data-cells="card"] table.cal th{border-bottom:0}
@@ -12916,6 +12916,49 @@ function fitCalCells(){
 new ResizeObserver(()=>requestAnimationFrame(fitCalCells)).observe(document.querySelector("table.cal"));
 document.getElementById("prevM").onclick=()=>{viewM--;if(viewM<0){viewM=11;viewY--;}renderCal();};
 document.getElementById("nextM").onclick=()=>{viewM++;if(viewM>11){viewM=0;viewY++;}renderCal();};
+
+/* ---------- 손가락으로 좌우로 밀어 달 이동 (터치 입력만, 마우스 끌기는 무시) ----------
+   왼쪽으로 밀면 다음 달, 오른쪽으로 밀면 이전 달. 가로로 50px 이상(빠르게 튕기면 30px) 움직이고
+   세로보다 가로 이동이 커야 넘어감. 끄는 동안 달력이 손가락을 따라 움직이고, 놓으면 넘어가거나 제자리로 돌아옴.
+   밀고 난 직후의 클릭(날짜 선택·일정 추가)은 무시한다. */
+(function(){
+  const area=document.querySelector("table.cal");
+  let id=null, sx=0, sy=0, st=0, dragging=false, suppressUntil=0;
+  const setX=(x,anim)=>{area.style.transition=anim?"transform .16s ease-out, opacity .16s":"none";
+    area.style.transform=x?"translateX("+x+"px)":"";area.style.opacity=x?String(Math.max(.4,1-Math.abs(x)/area.clientWidth)):"";};
+  area.addEventListener("pointerdown",e=>{
+    if(e.pointerType!=="touch"||id!==null)return;
+    id=e.pointerId; sx=e.clientX; sy=e.clientY; st=performance.now(); dragging=false;
+  });
+  area.addEventListener("pointermove",e=>{
+    if(e.pointerId!==id)return;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    if(!dragging&&Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)*1.2){
+      dragging=true;
+      try{area.setPointerCapture(id);}catch(_){} // 끌기 시작한 뒤에만 잡음 (그냥 누르기는 날짜 칸 클릭으로 가야 하므로)
+    }
+    if(dragging)setX(dx*0.6,false);
+  });
+  const end=(e)=>{
+    if(e.pointerId!==id)return;
+    id=null;
+    if(!dragging)return;
+    dragging=false; suppressUntil=performance.now()+400;
+    const dx=e.clientX-sx, dy=e.clientY-sy, fast=performance.now()-st<300;
+    const swipe=e.type==="pointerup"&&Math.abs(dx)>=(fast?30:50)&&Math.abs(dx)>Math.abs(dy)*1.2;
+    if(!swipe){setX(0,true);return;}
+    const dir=dx<0?1:-1, w=area.clientWidth;
+    setX(-dir*w*0.6,true);                       // 밀던 방향으로 빠져나감
+    setTimeout(()=>{
+      document.getElementById(dir>0?"nextM":"prevM").click();
+      setX(dir*w*0.4,false); void area.offsetWidth; // 새 달은 반대쪽에서
+      setX(0,true);
+    },160);
+  };
+  area.addEventListener("pointerup",end);
+  area.addEventListener("pointercancel",end);
+  area.addEventListener("click",e=>{if(performance.now()<suppressUntil){e.stopPropagation();e.preventDefault();}},true);
+})();
 /* 끝난 일정: 날짜가 지났거나, 오늘이면서 종료(없으면 시작) 시각이 지난 일정. 종일 일정은 다음 날부터 */
 function isPastEvent(e){
   const t=new Date(), today=ymd(t), hm=pad(t.getHours())+":"+pad(t.getMinutes());

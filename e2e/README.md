@@ -8,10 +8,10 @@
 npm install                                  # 처음 한 번
 npx playwright install chromium webkit       # 브라우저가 없으면 한 번
 
-npm run test:e2e          # 전체 실행: PC · 태블릿 · iPhone · Android = 116개 (약 27초)
-npm run test:e2e:pc       # PC 만      (공통 26 + PC 전용 3)
-npm run test:e2e:tablet   # 태블릿만   (공통 26 + 태블릿 전용 3)
-npm run test:e2e:mobile   # 모바일만   (iPhone·Android 각각 공통 26 + 모바일 전용 3)
+npm run test:e2e          # 전체 실행: PC · 태블릿 · iPhone · Android = 120개 (약 30초)
+npm run test:e2e:pc       # PC 만      (공통 26 + PC 전용 4)
+npm run test:e2e:tablet   # 태블릿만   (공통 26 + 태블릿 전용 4)
+npm run test:e2e:mobile   # 모바일만   (iPhone·Android 각각 공통 26 + 모바일 전용 4)
 npm run test:e2e:shots    # 단계별 스크린샷 갤러리 열기 (e2e-screenshots/index.html)
 npm run test:e2e:report   # Playwright 보고서 열기 (http://localhost:9324, 이미 떠 있으면 브라우저만 다시 엶)
 
@@ -71,6 +71,7 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
 | `openTab(page, "회의록")`, `dayCell`, `chip(page, 날짜, 제목)`, `modalBox` | 화면 요소 |
 | `clickDay(page, 날짜)` · `openEvent(page, 날짜, 제목)` · `selectDay` · `agendaItem` | 일정 추가 창 / 수정 창 열기 (기기별 조작 차이를 흡수), 모바일 날짜 선택·목록 항목 |
 | `deviceClass(page)` · `isMobileView(page)` | `"pc"` / `"tablet"` / `"mobile"` |
+| `swipe(page, dx, dy, { pointerType, duration, at, click })` | 달력을 손가락(또는 마우스)으로 끌기 — Pointer Events 를 직접 보냄 |
 | `readDb(page)` | 앱이 localStorage 에 저장한 데이터 |
 | `expectBarColor(칩, [색])` | 일정 막대가 그 색(생략하면 디자인 대표색)의 반투명 채움인지 확인 |
 | `expectDialog(dialogs, 문구)`, `answerConfirm(false)` | 알림창 문구 확인, confirm 에 '취소' 누르기 |
@@ -113,6 +114,8 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
 | 7-3 | responsive | 모바일: 하단 탭바, 색 막대만(글자 없음), 날짜 선택 → 아래 일정 목록(오늘 기본, 시간순·종일·메모), 빈 날 안내, 아래에서 올라오는 추가 창, 달 이동 시 1일 선택 `@mobile` |
 | 7-4 | responsive | 모바일: 일정 많으면 막대 + '+N', 아래 목록에는 전부 `@mobile` |
 | 7-5 | responsive | 모바일: 회의록 카드(수정 버튼 오른쪽 위), 검색칸 전체 폭 `@mobile` |
+| 7-6 | responsive | 터치로 달력을 좌우로 밀면 다음·이전 달 (빠른 튕김 30px~, 보통 50px~), 짧거나 세로로 끈 것은 무시, 밀고 뗀 직후 클릭 무시 `@mobile @tablet` |
+| 7-7 | responsive | PC: 마우스 끌기는 달 이동으로 처리하지 않음 `@pc` |
 
 ## 다루지 않는 것
 - 카메라 실시간 읽기: 실제 카메라가 필요해 제외했습니다. QR 사진 가져오기는 4-3·4-4 에서 앱이 만든 QR 이미지를 그대로 파일로 저장해 검증합니다 (실제 촬영 사진의 반사·흔들림은 다루지 않음).

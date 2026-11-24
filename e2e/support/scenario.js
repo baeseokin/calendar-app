@@ -126,6 +126,32 @@ export async function openEvent(page, date, title) {
   }
   await expect(modalBox(page)).toBeVisible();
 }
+/**
+ * 달력을 손가락으로 끌기 (Pointer Events 를 순서대로 보냄: down → move × steps → up).
+ *   dx < 0: 왼쪽으로 밀기(다음 달), dx > 0: 오른쪽으로 밀기(이전 달)
+ *   opts.pointerType: "touch"(기본) | "mouse",  opts.duration: 끄는 시간(ms, 기본 400 — 빠른 튕김은 300 미만)
+ *   opts.at: 시작 날짜 칸(그 칸 가운데에서 시작, 기본은 달력 가운데),  opts.click: 끝난 뒤 브라우저처럼 click 도 보냄
+ * Playwright 에는 손가락 끌기 API 가 없어 이벤트를 직접 만든다. 앱은 실제 기기에서도 같은 Pointer Events 를 받는다.
+ */
+export async function swipe(page, dx, dy = 0, opts = {}) {
+  const { pointerType = "touch", duration = 400, at = null, click = false, steps = 8 } = opts;
+  const target = at ? dayCell(page, at) : page.locator("table.cal");
+  const b = await target.boundingBox();
+  const x0 = b.x + b.width / 2, y0 = b.y + b.height / 2;
+  await target.evaluate(async (el, { x0, y0, dx, dy, pointerType, duration, click, steps }) => {
+    const fire = (type, x, y) => (document.elementFromPoint(x, y) || el).dispatchEvent(new PointerEvent(type, {
+      bubbles: true, cancelable: true, composed: true, pointerId: 41, pointerType, isPrimary: true, clientX: x, clientY: y, buttons: type === "pointerup" ? 0 : 1 }));
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const t0 = performance.now();
+    fire("pointerdown", x0, y0);
+    for (let i = 1; i <= steps; i++) { await wait(duration / steps); fire("pointermove", x0 + (dx * i) / steps, y0 + (dy * i) / steps); }
+    while (performance.now() - t0 < duration) await wait(5);
+    fire("pointerup", x0 + dx, y0 + dy);
+    if (click) (document.elementFromPoint(x0 + dx, y0 + dy) || el).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: x0 + dx, clientY: y0 + dy }));
+  }, { x0, y0, dx, dy, pointerType, duration, click, steps });
+  await expect(page.locator("table.cal")).not.toHaveAttribute("style", /translateX/); // 넘김·되돌림 움직임이 끝날 때까지
+}
+
 /** 모바일: 선택한 날의 일정 목록 항목 */
 export const agendaItem = (page, title) => page.locator("#agList .ag-it", { hasText: title });
 /** 날짜 칸 안의 일정 칩 (보이는 것만 고르려면 .filter({ visible: true })) */

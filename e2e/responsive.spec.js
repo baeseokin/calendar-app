@@ -1,6 +1,6 @@
 // 화면 E2E: 기기별 레이아웃 (PC · 태블릿 · 모바일)
 //   각 케이스는 제목의 기기 태그(@pc / @tablet / @mobile)에 해당하는 프로젝트에서만 실행된다 (playwright.config.js).
-import { test, expect, startScenario, makeDb, ev, mt, openTab, dayCell, chip, selectDay, clickDay, agendaItem, modalBox, readDb, TODAY } from "./support/scenario.js";
+import { test, expect, startScenario, makeDb, ev, mt, openTab, dayCell, chip, selectDay, clickDay, agendaItem, modalBox, readDb, swipe, TODAY } from "./support/scenario.js";
 
 const box = (loc) => loc.boundingBox();
 /** 가로 스크롤 없이 화면 폭 안에 들어오는지 */
@@ -183,5 +183,56 @@ test("7-5 모바일: 회의록은 카드 목록으로 표시된다 @mobile", asy
     const panel = await box(page.locator("#tab-mt .panel"));
     expect(s.width).toBeGreaterThan(panel.width - 40);
     expect(s.y).toBeGreaterThan(add.y + add.height - 1);
+  });
+});
+
+test("7-6 터치 기기: 달력을 좌우로 밀면 다음 달·이전 달로 넘어간다 @mobile @tablet", async ({ page }, testInfo) => {
+  const { step } = await startScenario(page, testInfo, "7-6_좌우로_밀어_달_이동", {
+    db: makeDb({ events: [ev("2026-12-15", "연말 결산"), ev("2026-10-20", "중간 점검")] }),
+  });
+  const title = page.locator("#calTitle");
+  const w = (await page.locator("table.cal").boundingBox()).width;
+
+  await step("왼쪽으로 밀기 → 2026년 12월, 그 달 일정 표시", async () => {
+    await swipe(page, -w * 0.5);
+    await expect(title).toHaveText("2026년 12월");
+    await expect(chip(page, "2026-12-15", "연말 결산")).toBeVisible();
+  });
+  await step("오른쪽으로 두 번 밀기 → 2026년 10월", async () => {
+    await swipe(page, w * 0.5);
+    await expect(title).toHaveText("2026년 11월");
+    await swipe(page, w * 0.5);
+    await expect(title).toHaveText("2026년 10월");
+    await expect(chip(page, "2026-10-20", "중간 점검")).toBeVisible();
+  });
+  await step("빠르게 짧게 튕기기(35px, 0.2초) → 다음 달 11월", async () => {
+    await swipe(page, -35, 0, { duration: 200 });
+    await expect(title).toHaveText("2026년 11월");
+  });
+  await step("천천히 짧게 끌기(35px) · 세로로 더 많이 끌기 → 넘어가지 않고 제자리", async () => {
+    await swipe(page, -35, 0, { duration: 600 });
+    await swipe(page, -60, 160);
+    await expect(title).toHaveText("2026년 11월");
+    await expect(page.locator("table.cal")).toHaveCSS("opacity", "1");
+  });
+  await step("날짜 칸 위에서 밀고 손을 떼도 그 칸을 누른 것으로 처리하지 않음 (태블릿: 일정 추가 창이 안 열림)", async () => {
+    await swipe(page, -w * 0.5, 0, { at: "2026-11-18", click: true }); // 손을 뗄 때 브라우저가 보내는 click 까지 흉내
+    await expect(title).toHaveText("2026년 12월");
+    await expect(modalBox(page)).toHaveCount(0);
+    await expect(page.locator("#calBody td.sel")).toHaveAttribute("data-date", "2026-12-01"); // 달이 바뀌면 그 달 1일 선택
+  });
+  await step("밀지 않고 날짜 칸을 그냥 누르면 평소대로 동작", async () => {
+    await clickDay(page, "2026-12-10");
+    await expect(page.locator("#m_date")).toHaveValue("2026-12-10");
+  });
+});
+
+test("7-7 PC: 마우스로 끄는 것은 달 이동으로 처리하지 않는다 @pc", async ({ page }, testInfo) => {
+  const { step } = await startScenario(page, testInfo, "7-7_PC_마우스_끌기_무시");
+
+  await step("마우스로 왼쪽으로 크게 끌기 → 2026년 11월 그대로", async () => {
+    const w = (await page.locator("table.cal").boundingBox()).width;
+    await swipe(page, -w * 0.5, 0, { pointerType: "mouse" });
+    await expect(page.locator("#calTitle")).toHaveText("2026년 11월");
   });
 });
