@@ -81,11 +81,6 @@
   .qrbig img{image-rendering:pixelated;width:min(66vh,100%,620px);height:auto;cursor:none;background:#fff} /* 커서가 QR 을 가리지 않게 */
   .qrnav{margin-top:10px}
   .qrnum{font-size:20px}
-  .camwrap{position:relative;display:inline-block;max-width:360px;width:100%}
-  .camwrap video{display:block}
-  .camaim{position:absolute;left:15%;top:50%;width:70%;aspect-ratio:1;transform:translateY(-50%);border:3px solid rgba(255,255,255,.85);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.25);pointer-events:none}
-  video{width:100%;max-width:360px;border-radius:12px;background:#000}
-  .scanstat{font-size:13px;margin-top:8px}
   .rev{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:10px}
   .rev .hd{background:var(--panel2);padding:8px 10px;font-weight:700;font-size:13px;display:flex;gap:8px;align-items:center}
   .rev .it{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border-top:1px solid var(--line);font-size:12.5px}
@@ -95,7 +90,6 @@
   .tag.skip{background:#222;color:#999}
   .small{font-size:11.5px}
   .foot{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:7px 12px;font-size:11px;color:var(--mut);text-align:center}
-  .kbd{font-family:ui-monospace,monospace;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:11px}
   .hidden{display:none !important}
   .themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-top:10px}
   .theme-card{border:2px solid var(--line);border-radius:var(--rsm);background:var(--panel2);color:var(--txt);padding:8px;text-align:left;display:flex;flex-direction:column;gap:6px}
@@ -322,11 +316,9 @@ applyTheme(loadUi().theme); // 화면이 그려지기 전에 적용 (깜빡임 �
       <div class="row">
         <button class="btn pri" id="impImgBtn">🖼 QR 사진으로 가져오기</button>
         <button class="btn" id="impFileBtn">📄 패치 파일 열기</button>
-        <button class="btn ghost" id="impCam">📷 카메라로 실시간 읽기</button>
         <input type="file" id="impImg" accept="image/*" multiple class="hidden">
         <input type="file" id="impFile" accept=".json,.psync,application/json" class="hidden">
       </div>
-      <div class="mut small" style="margin-top:8px">※ ‘카메라로 실시간 읽기’는 보안 연결(https·localhost)에서만 동작합니다. 파일을 직접 열거나 메신저 뷰어로 연 경우엔 막히니 <b>QR 사진</b>을 쓰세요.</div>
       <div id="impArea" style="margin-top:10px"></div>
     </div>
   </section>
@@ -371,7 +363,7 @@ applyTheme(loadUi().theme); // 화면이 그려지기 전에 적용 (깜빡임 �
       <div class="mut small" style="margin-top:8px;line-height:1.7">
         • 이 파일 하나만 있으면 됩니다. 인터넷·설치 불필요. 폐쇄망 PC에 복사해서 더블클릭으로 여세요.<br>
         • 데이터는 이 브라우저 안에 저장됩니다(localStorage). 같은 PC·같은 브라우저에서 다시 열면 유지됩니다.<br>
-        • <b>QR 내보내기</b>: 변경 내용을 QR로 띄웁니다 → 상대 PC의 카메라로 읽으면 자동 반영.<br>
+        • <b>QR 내보내기</b>: 변경 내용을 QR로 한 장씩 띄웁니다 → 휴대폰 카메라 앱으로 찍어 상대 PC에서 "QR 사진으로 가져오기".<br>
         • <b>파일 내보내기</b>: 작은 패치 파일을 저장 → 이메일로 반입/반출 → 상대 PC에서 "패치 파일 열기".<br>
         • 가져오기 전 <b>미리보기</b>에서 무엇이 바뀌는지 확인하고 적용합니다. <span class="tag cf">양쪽수정</span>은 직접 선택.
       </div>
@@ -13252,7 +13244,7 @@ function handleScannedString(s){
   }
   return {status:"invalid"};
 }
-/* QR 조각 수신 현황 (사진·카메라 공통): 받은 번호는 초록, 못 받은 번호는 (markMissing 이면) 빨강 */
+/* QR 조각 수신 현황: 받은 번호는 초록, 못 받은 번호는 (markMissing 이면) 빨강 */
 function missingChunks(){const n=scanBuf.n||0,rec=scanBuf.rec||{},m=[];for(let i=1;i<=n;i++)if(!rec[i])m.push(i);return m;}
 function chunkGridHtml(markMissing){
   const n=scanBuf.n; if(!n)return "";
@@ -13269,70 +13261,6 @@ function decodePatchText(text){
   const p=unpackPatch(JSON.parse(json));
   if(!p||!Array.isArray(p.events)||!Array.isArray(p.meetings))throw new Error("형식 불일치");
   return p;
-}
-
-/* 카메라 스캔 */
-document.getElementById("impCam").onclick=startCamera;
-function startCamera(){
-  resetScan();
-  if(!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    modal(`
-      <h3>카메라로 실시간 읽기</h3>
-      <div class="scanstat">⚠ 이 화면은 보안 연결(https·localhost)이 아니라 카메라를 사용할 수 없습니다.<br>파일을 직접 열었거나 메신저 뷰어로 연 경우입니다.<br><br><b>QR 사진으로 가져오기</b>를 이용하세요 — 상대 화면의 QR을 휴대폰 카메라 앱으로 찍은 뒤, 그 사진을 선택하면 됩니다. (여러 장이면 모두 선택)</div>
-      <div class="row" style="margin-top:14px"><span class="spacer"></span>
-        <button class="btn ghost" id="m_cancel">닫기</button>
-        <button class="btn pri" id="m_toimg">QR 사진 선택</button></div>
-    `,(root)=>{
-      root.querySelector("#m_cancel").onclick=closeModal;
-      root.querySelector("#m_toimg").onclick=()=>{closeModal();document.getElementById("impImg").click();};
-    });
-    return;
-  }
-  modal(`
-    <h3>카메라로 실시간 읽기</h3>
-    <div class="camwrap"><video id="cam" playsinline muted autoplay></video><div class="camaim"></div></div>
-    <div class="scanstat" id="scanStat">카메라 준비 중…</div>
-    <div class="row" style="margin-top:12px"><span class="spacer"></span><button class="btn ghost" id="m_cancel">닫기</button></div>
-  `,(root)=>{
-    const video=root.querySelector("#cam");
-    const stat=root.querySelector("#scanStat");
-    const canvas=document.createElement("canvas");
-    let stream=null, raf=null, done=false;
-    function stop(){done=true;if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(t=>t.stop());}
-    root.querySelector("#m_cancel").onclick=()=>{stop();closeModal();};
-    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-      stat.innerHTML="⚠ 이 브라우저/환경에서 카메라를 쓸 수 없습니다.<br>파일을 <span class='kbd'>file://</span>로 연 경우 카메라가 막힐 수 있습니다. 대신 <b>QR 사진 열기</b> 또는 <b>패치 파일 열기</b>를 사용하세요.";
-      return;
-    }
-    navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}}).then(s=>{
-      stream=s;video.srcObject=s;video.play().catch(()=>{});stat.textContent="QR 한 장을 가운데 네모 안에 비추세요…";
-      const tick=()=>{
-        if(done)return;
-        if(video.readyState===video.HAVE_ENOUGH_DATA){
-          canvas.width=video.videoWidth;canvas.height=video.videoHeight;
-          const ctx=canvas.getContext("2d");ctx.drawImage(video,0,0,canvas.width,canvas.height);
-          const img=ctx.getImageData(0,0,canvas.width,canvas.height);
-          let code=jsQR(img.data,img.width,img.height,{inversionAttempts:"attemptBoth"});
-          if(!code){ // 이웃 QR 이 같이 비치면 위치를 잘못 잡으므로 가운데 70% 만 다시
-            const cs=Math.round(Math.min(canvas.width,canvas.height)*0.7), cx=(canvas.width-cs)>>1, cy=(canvas.height-cs)>>1;
-            const sub=ctx.getImageData(cx,cy,cs,cs);
-            code=jsQR(sub.data,cs,cs,{inversionAttempts:"attemptBoth"});
-          }
-          if(code&&code.data){
-            const r=handleScannedString(code.data);
-            if(r.status==="partial"){stat.innerHTML="QR <b>"+r.got+" / "+r.n+"</b>장 읽음 (방금 "+r.i+"번) · 남은 QR: <b>"+numList(missingChunks())+"</b>"+chunkGridHtml(false);}
-            else if(r.status==="mismatch"){stat.innerHTML="⚠ 다른 내보내기의 QR입니다 (총 "+r.n+"장 중 "+r.i+"번). 지금 읽는 QR은 총 "+scanBuf.n+"장 · 남은 QR: <b>"+numList(missingChunks())+"</b>"+chunkGridHtml(false);}
-            else if(r.status==="complete"){stop();try{const p=decodePatchText(r.text);closeModal();showReview(p);}catch(e){stat.innerHTML="⚠ 해석 실패: "+esc(e.message);}return;}
-            else{stat.textContent="QR 형식이 아닙니다. (이 앱의 QR인지 확인)";}
-          }
-        }
-        raf=requestAnimationFrame(tick);
-      };
-      raf=requestAnimationFrame(tick);
-    }).catch(err=>{
-      stat.innerHTML="⚠ 카메라 접근 실패: "+esc(err.message)+"<br><span class='kbd'>file://</span>로 연 경우 카메라가 막힙니다. <b>QR 사진 열기</b> 또는 <b>패치 파일 열기</b>를 사용하세요.";
-    });
-  });
 }
 
 /* 사진 속 QR 디코딩 — 화면 촬영 대비: 여러 해상도로 축소 + 흑백 대비보정 + 반전 시도 */

@@ -1,6 +1,5 @@
 // 화면 E2E: QR 사진으로 동기화 — 진행 상태, 사진별 결과, 못 읽은 QR 번호 안내, '사진 더 추가'로 이어서 완성
 //   보내는 기기 화면의 QR 이미지(GIF)를 실제 파일로 저장해, 받는 기기에서 그 '사진'을 고르는 방식으로 흉내 낸다.
-//   (카메라 실시간 읽기는 실제 카메라가 필요해 다루지 않음)
 import fs from "fs";
 import { test, expect, startScenario, preparePage, openApp, makeDb, ev, openTab, chip, modalBox } from "./support/scenario.js";
 
@@ -58,6 +57,10 @@ test("4-3 QR 사진 일부를 못 읽으면 못 읽은 QR 번호를 알려 주�
   const picked = qr.filter((_, i) => !missing.includes(i + 1));
 
   other = await openReceiver(browser, testInfo);
+  await step("[외부] 동기화 탭 가져오기 버튼은 'QR 사진으로 가져오기'·'패치 파일 열기' 두 개 (카메라 실시간 읽기 없음)", async () => {
+    const btns = other.locator("#tab-sync .panel").nth(1).locator("button");
+    await expect(btns).toHaveText(["🖼 QR 사진으로 가져오기", "📄 패치 파일 열기"]);
+  }, other);
   await step(`[외부] QR 사진 ${picked.length}장 선택 (2번·${n}번 빠짐) → 분석 후 '못 읽은 QR: 2번, ${n}번'`, async () => {
     await other.locator("#impImg").setInputFiles(picked);
     await expect(progress(other).getByRole("heading", { name: "QR 사진으로 가져오기" })).toBeVisible();
