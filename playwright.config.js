@@ -6,6 +6,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 const WEB_PORT = 5180;
 
+/** 이 기기 태그가 붙었거나, 기기 태그가 하나도 없는(공통) 케이스만 실행 */
+const onlyFor = (tag) => new RegExp(`@${tag}\\b|^(?!.*@(?:pc|tablet|mobile)\\b)`);
+
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/global-setup.js",
@@ -22,12 +25,15 @@ export default defineConfig({
     trace: "retain-on-failure",
     acceptDownloads: true,
   },
-  // 모든 케이스를 PC · iPhone · Android 세 환경에서 모두 실행합니다.
-  //   - 모바일은 기기 에뮬레이션(화면 크기·터치·모바일 UA)입니다. 앱은 폭 640px 이하에서 모바일 레이아웃(@media)으로 바뀝니다.
+  // 기기 구분: PC(1025px~) · 태블릿(641~1024px) · 모바일(~640px). 앱은 이 기준으로 레이아웃(@media)이 바뀝니다.
+  //   - 공통 케이스(제목에 기기 태그 없음): 모든 프로젝트에서 실행
+  //   - 기기 전용 케이스: 제목에 @pc / @tablet / @mobile 태그 → 그 기기 프로젝트에서만 실행 (여러 개 붙일 수 있음)
+  //   - 모바일·태블릿은 기기 에뮬레이션(화면 크기·터치·모바일 UA)입니다.
   projects: [
-    { name: "desktop", use: { viewport: { width: 1440, height: 900 } } },
-    { name: "iphone", use: { ...devices["iPhone 14"] } },
-    { name: "android", use: { ...devices["Pixel 7"] } },
+    { name: "desktop", grep: onlyFor("pc"), use: { viewport: { width: 1440, height: 900 } } },
+    { name: "tablet", grep: onlyFor("tablet"), use: { ...devices["iPad (gen 7)"] } },
+    { name: "iphone", grep: onlyFor("mobile"), use: { ...devices["iPhone 14"] } },
+    { name: "android", grep: onlyFor("mobile"), use: { ...devices["Pixel 7"] } },
   ],
   webServer: {
     command: `node e2e/serve.mjs ${WEB_PORT}`,

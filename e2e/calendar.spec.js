@@ -1,5 +1,5 @@
 // 화면 E2E: 달력 · 일정 추가/수정/삭제 · 화면 채우기 · +N 표시
-import { test, expect, startScenario, makeDb, ev, dayCell, clickDay, chip, modalBox, readDb, expectDialog, TODAY } from "./support/scenario.js";
+import { test, expect, startScenario, makeDb, ev, dayCell, clickDay, chip, modalBox, readDb, expectDialog, openEvent, TODAY } from "./support/scenario.js";
 
 test("1-1 처음 열면 기기 지정 창이 뜨고, 선택하면 상단에 기기 이름이 표시된다", async ({ page }, testInfo) => {
   const { step } = await startScenario(page, testInfo, "1-1_최초_기기_지정", { db: null });
@@ -85,7 +85,7 @@ test("1-4 일정을 수정하고 삭제할 수 있다", async ({ page }, testInf
   });
 
   await step("25일 '디자인 리뷰' 클릭 → '일정 수정' 창", async () => {
-    await chip(page, "2026-11-25", "디자인 리뷰").click();
+    await openEvent(page, "2026-11-25", "디자인 리뷰");
     await expect(modalBox(page).getByRole("heading", { name: "일정 수정" })).toBeVisible();
     await expect(page.locator("#m_title")).toHaveValue("디자인 리뷰");
   });
@@ -97,7 +97,7 @@ test("1-4 일정을 수정하고 삭제할 수 있다", async ({ page }, testInf
     await expect(chip(page, "2026-11-27", "디자인 최종 리뷰")).toBeVisible();
   });
   await step("다시 열어 삭제 → 확인 → 달력에서 사라짐", async () => {
-    await chip(page, "2026-11-27", "디자인 최종 리뷰").click();
+    await openEvent(page, "2026-11-27", "디자인 최종 리뷰");
     await page.locator("#m_del").click();
     await expectDialog(dialogs, "이 일정을 삭제할까요?");
     await expect(page.locator("#calBody .ev")).toHaveCount(0);
@@ -133,7 +133,7 @@ test("1-5 이전 달·다음 달·오늘 버튼으로 달을 이동한다", asyn
   });
 });
 
-test("1-6 달력이 브라우저 화면을 가로·세로로 채운다", async ({ page }, testInfo) => {
+test("1-6 달력이 브라우저 화면을 가로·세로로 채운다 @pc @tablet", async ({ page }, testInfo) => {
   const { step } = await startScenario(page, testInfo, "1-6_화면_채우기");
 
   await step("달력 표 폭 = 화면 폭 − 좌우 여백, 아래쪽은 하단 안내줄 바로 위까지", async () => {
@@ -146,7 +146,7 @@ test("1-6 달력이 브라우저 화면을 가로·세로로 채운다", async (
   });
 });
 
-test("1-7 칸에 들어가는 만큼 일정을 보이고, 넘치는 개수만 +N 으로 표시한다 (화면 크기에 따라 다시 계산)", async ({ page }, testInfo) => {
+test("1-7 칸에 들어가는 만큼 일정을 보이고, 넘치는 개수만 +N 으로 표시한다 (화면 크기에 따라 다시 계산) @pc @tablet", async ({ page }, testInfo) => {
   const titles = ["스탠드업", "고객 미팅", "디자인 리뷰", "코드 리뷰", "QA 점검", "배포", "회고", "교육"];
   const { step } = await startScenario(page, testInfo, "1-7_넘침_+N_표시", {
     db: makeDb({ events: titles.map((t, i) => ev(TODAY, t, { start: `${String(9 + i).padStart(2, "0")}:00` })) }),

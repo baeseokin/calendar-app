@@ -1,5 +1,5 @@
 // 화면 E2E: 화면 디자인(테마) 선택 · 일정 막대 색상
-import { test, expect, startScenario, makeDb, ev, openTab, chip, clickDay, modalBox, readDb, expectBarColor } from "./support/scenario.js";
+import { test, expect, startScenario, makeDb, ev, openTab, chip, clickDay, modalBox, readDb, expectBarColor, openEvent } from "./support/scenario.js";
 
 const html = (page) => page.locator("html");
 const card = (scope, name) => scope.locator(".theme-card", { hasText: name });
@@ -85,7 +85,7 @@ test("6-3 일정 막대 색상을 고르면 막대 전체가 그 색(반투명)�
     await expectBarColor(c(), "#30a46c");
   });
   await step("다시 열어 '기본'으로 저장 → 디자인 색(고대비 노랑)을 따름", async () => {
-    await c().click();
+    await openEvent(page, "2026-11-26", "고객 미팅");
     await expect(swatch(page, "초록")).toHaveClass(/sel/);
     await swatch(page, "기본(디자인 색)").click();
     await page.locator("#m_save").click();
@@ -111,7 +111,7 @@ test("6-4 팔레트에 없는 색상 값(가져온 데이터 등)은 무시하�
     await expect(chip(page, "2026-11-26", "이상한 값")).not.toHaveAttribute("style", /url/);
   });
   await step("이상한 값의 일정을 열면 '기본'이 선택돼 있음", async () => {
-    await chip(page, "2026-11-26", "이상한 값").click();
+    await openEvent(page, "2026-11-26", "이상한 값");
     await expect(swatch(page, "기본(디자인 색)")).toHaveClass(/sel/);
   });
 });

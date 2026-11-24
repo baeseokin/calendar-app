@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# git pre-commit 훅 (사람이 직접 커밋할 때): 스테이징된 변경과 관련된 E2E 를 PC · iPhone · Android 에서 실행합니다.
+# git pre-commit 훅 (사람이 직접 커밋할 때): 스테이징된 변경과 관련된 E2E 를 PC · 태블릿 · iPhone · Android 에서 실행합니다.
 #   - 이미 같은 내용으로 통과했으면(예: Claude 가 검증 후 커밋) 다시 실행하지 않습니다.
 #   - 실패하면 커밋을 막습니다. 자동 수정은 하지 않으니 Claude 에게 "/e2e" 로 수정을 요청하세요.
 #   - 급할 때 우회: git commit --no-verify  (권장하지 않음)

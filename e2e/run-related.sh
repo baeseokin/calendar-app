@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 스테이징된 변경과 관련된 화면 E2E 를 PC · iPhone · Android 에서 실행하고, 통과하면 기록을 남깁니다.
+# 스테이징된 변경과 관련된 화면 E2E 를 PC · 태블릿 · iPhone · Android 에서 실행하고, 통과하면 기록을 남깁니다.
 #
 #   e2e/run-related.sh            관련 테스트 실행 → 통과 시 기록
 #   e2e/run-related.sh --all      전체 실행 → 통과 시 기록
@@ -54,10 +54,10 @@ if [[ -n "$UNSTAGED" ]]; then
 fi
 
 if [[ "$MODE" == "all" ]]; then
-  echo "▶ 화면 E2E 전체 실행 (PC · iPhone · Android)"
+  echo "▶ 화면 E2E 전체 실행 (PC · 태블릿 · iPhone · Android)"
   npx playwright test
 else
-  echo "▶ 관련 화면 E2E 실행 (PC · iPhone · Android): $SPECS"
+  echo "▶ 관련 화면 E2E 실행 (PC · 태블릿 · iPhone · Android): $SPECS"
   # shellcheck disable=SC2086
   npx playwright test $SPECS
 fi

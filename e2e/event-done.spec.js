@@ -1,6 +1,6 @@
 // 화면 E2E: 일정 종료 처리 (하나씩 · 지난 일정 한 번에)
 //   기준 시각: 2026-11-24(화) 10:00
-import { test, expect, startScenario, makeDb, ev, chip, modalBox, readDb, expectDialog, TODAY } from "./support/scenario.js";
+import { test, expect, startScenario, makeDb, ev, chip, modalBox, readDb, expectDialog, openEvent, TODAY } from "./support/scenario.js";
 
 test("2-1 일정을 종료 처리하면 흐리게·취소선으로 표시되고, 종료 취소로 되돌릴 수 있다", async ({ page }, testInfo) => {
   const { step } = await startScenario(page, testInfo, "2-1_일정_종료_처리", {
@@ -10,7 +10,7 @@ test("2-1 일정을 종료 처리하면 흐리게·취소선으로 표시되고,
 
   await step("23일 'QA 점검' 클릭 → 수정 창에 '✔ 종료 처리' 버튼", async () => {
     await expect(c).not.toHaveClass(/done/);
-    await c.click();
+    await openEvent(page, "2026-11-23", "QA 점검");
     await expect(page.locator("#m_done")).toHaveText("✔ 종료 처리");
   });
   await step("'✔ 종료 처리' → 창 닫힘, 달력에 '✔ 15:00 QA 점검' (흐리게·취소선)", async () => {
@@ -22,7 +22,7 @@ test("2-1 일정을 종료 처리하면 흐리게·취소선으로 표시되고,
     expect((await readDb(page)).events[0].done).toBe(true);
   });
   await step("다시 열면 '✔ 종료됨' 표시와 '↺ 종료 취소' 버튼", async () => {
-    await c.click();
+    await openEvent(page, "2026-11-23", "QA 점검");
     await expect(modalBox(page).getByText("✔ 종료됨")).toBeVisible();
     await expect(page.locator("#m_done")).toHaveText("↺ 종료 취소");
   });

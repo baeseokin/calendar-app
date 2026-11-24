@@ -58,7 +58,7 @@
   .evs{position:absolute;left:4px;right:4px;top:22px;bottom:4px;overflow:hidden}
   .ev.done{opacity:.45;text-decoration:line-through}
   .evs .more{font-size:11.5px;line-height:1.25;color:var(--mut)}
-  .ev{font-size:11px;line-height:1.25;background:color-mix(in srgb,var(--c,var(--accent)) var(--ev-fill),transparent);border-radius:var(--rev);padding:2px 6px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ev{font-size:11px;line-height:1.25;--ev-a:var(--ev-fill);background:color-mix(in srgb,var(--c,var(--accent)) var(--ev-a),transparent);border-radius:var(--rev);padding:2px 6px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   table.mt{width:100%;border-collapse:collapse}
   table.mt th,table.mt td{border:1px solid var(--line);padding:7px 8px;text-align:left;font-size:13px;vertical-align:top}
   table.mt th{background:var(--panel2);color:var(--mut);font-weight:600;position:sticky;top:0}
@@ -104,13 +104,87 @@
   .sw.def{background:var(--accent)}
   .sw.def::after{content:"기본";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff}
   .checkrow{display:flex;align-items:center;gap:7px;font-size:13px}
+  /* 모바일 전용 '선택한 날 일정' 목록 (PC·태블릿에서는 숨김) */
+  /* QR 가져오기 진행 상태 */
+  .pbar{height:8px;background:var(--panel2);border-radius:99px;overflow:hidden;margin:8px 0}
+  .pbar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .15s}
+  .chunks{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}
+  .ck{min-width:32px;height:30px;padding:0 6px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;
+    background:var(--panel2);border:1px dashed var(--line);color:var(--mut)}
+  .ck.ok{background:color-mix(in srgb,var(--ok) 28%,transparent);border:1px solid var(--ok);color:var(--txt)}
+  .ck.miss{border:1px solid var(--bad);color:var(--bad)}
+  .photolog{border:1px solid var(--line);border-radius:var(--rsm);margin-top:8px;max-height:180px;overflow:auto}
+  .photolog div{display:flex;gap:8px;padding:6px 10px;border-top:1px solid var(--line);font-size:12.5px}
+  .photolog div:first-child{border-top:0}
+  .photolog .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mut)}
+  .photolog .bad{color:var(--bad)}
+  .imp-msg{font-size:13px;line-height:1.6;margin-top:6px}
+  .imp-msg.err{color:var(--bad)}
+  .agenda{display:none}
+  .ag-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .ag-head strong{font-size:15px}
+  .ag-it{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:var(--rsm);margin-bottom:6px;cursor:pointer;
+    background:color-mix(in srgb,var(--c,var(--accent)) var(--ev-fill),transparent)}
+  .ag-it .ag-time{flex:0 0 76px;font-size:12px;font-weight:700;color:var(--mut)}
+  .ag-it .ag-title{font-weight:700;font-size:14px;word-break:break-all}
+  .ag-it .ag-memo{font-size:12px;color:var(--mut);margin-top:2px;white-space:pre-wrap}
+  .ag-it.done{opacity:.5}
+  .ag-it.done .ag-title{text-decoration:line-through}
+  .ag-empty{padding:18px;text-align:center;color:var(--mut);font-size:13px}
+
+  /* ---------- 태블릿 (641~1024px): 터치하기 좋은 크기, 조금 촘촘한 달력 ---------- */
+  @media(min-width:641px) and (max-width:1024px){
+    .app{padding:10px 12px 44px}
+    header.top h1{font-size:15px}
+    .btn{min-height:36px}
+    .btn.sm{min-height:34px;padding:6px 11px}
+    .tabs button{padding:11px 10px;font-size:14px}
+    .cal-head .hint{display:none}
+    .ev{font-size:10.5px;padding:3px 5px}
+    table.mt td.check{max-width:300px}
+    .modal{width:min(560px,100%)}
+  }
+
+  /* ---------- 모바일 (~640px): 하단 탭바, 달력은 색 막대만, 아래에 선택한 날 일정 목록 ---------- */
   @media(max-width:640px){
-    table.cal td{height:70px}
+    .app{padding:10px 10px 86px}
+    header.top{gap:6px}
+    header.top h1{font-size:15px;width:100%}
+    .tabs{position:fixed;left:0;right:0;bottom:0;margin:0;z-index:40;border-radius:0;border-width:1px 0 0;
+      padding:6px 6px calc(6px + env(safe-area-inset-bottom));flex-wrap:nowrap;gap:2px}
+    .tabs button{min-width:0;padding:8px 2px;font-size:12px}
+    .foot{display:none}
+    .panel{padding:10px;border-radius:var(--rsm)}
+    #tab-cal .panel{flex:none}
+    #tab-cal table.cal{flex:none;height:auto}
     .cal-head{gap:6px}
     .cal-head .title{min-width:0;font-size:15px;padding:0 4px}
     .cal-head .hint{display:none}
+    .btn{min-height:36px}
+    table.cal th{font-size:11px;padding:4px 0}
+    table.cal td{height:58px;padding:3px}
+    table.cal td.sel{background:color-mix(in srgb,var(--accent) 16%,transparent)}
+    .dnum{font-size:11px}
+    .evs{top:19px;left:3px;right:3px;bottom:3px}
+    .ev{font-size:0;line-height:0;height:5px;padding:0;margin-bottom:2px;border-radius:3px;--ev-a:85%}
+    .evs .more{font-size:9px;line-height:1}
+    .agenda{display:block;margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
     .grid2{grid-template-columns:1fr}
-    table.mt{display:block;overflow-x:auto}
+    /* 회의록: 표 → 카드 */
+    #tab-mt .row input#mtSearch{order:9;flex:1 1 100%;min-width:0;width:auto !important} /* 검색칸은 다음 줄 전체 폭 */
+    table.mt,table.mt tbody,table.mt tr,table.mt td{display:block;width:auto !important}
+    table.mt thead{display:none}
+    table.mt tr[data-mt]{position:relative;border:1px solid var(--line);border-radius:var(--rsm);background:var(--panel2);padding:10px 44px 10px 12px;margin-bottom:8px}
+    table.mt td{border:0;padding:1px 0;max-width:none}
+    table.mt tr[data-mt] td:nth-child(1),table.mt tr[data-mt] td:nth-child(2){display:inline-block;font-size:12px;color:var(--mut);margin-right:8px}
+    table.mt tr[data-mt] td:nth-child(3){font-weight:700;font-size:14px;margin:2px 0 4px}
+    table.mt tr[data-mt] td:nth-child(5):empty{display:none}
+    table.mt tr[data-mt] td:nth-child(5){font-size:12px;color:var(--mut);margin-top:4px}
+    table.mt tr[data-mt] td:last-child{position:absolute;top:8px;right:8px}
+    table.mt tr:hover td{background:transparent}
+    /* 모달: 아래에서 올라오는 시트 */
+    .modal-bg{align-items:flex-end;padding:0}
+    .modal{width:100%;max-height:92vh;border-radius:var(--radius) var(--radius) 0 0;padding:16px 14px calc(16px + env(safe-area-inset-bottom))}
   }
 </style>
 <script>
@@ -186,6 +260,10 @@ applyTheme(loadUi().theme); // 화면이 그려지기 전에 적용 (깜빡임 �
         </tr></thead>
         <tbody id="calBody"></tbody>
       </table>
+      <div class="agenda" id="agenda">
+        <div class="ag-head"><strong id="agTitle"></strong><span class="spacer"></span><button class="btn pri sm" id="agAdd">+ 일정 추가</button></div>
+        <div id="agList"></div>
+      </div>
     </div>
   </section>
 
@@ -12782,13 +12860,38 @@ function renderCal(){
   const body=document.getElementById("calBody"); body.innerHTML=html;
   body.querySelectorAll("td").forEach(td=>{
     td.onclick=(ev)=>{
+      if(isMobileUi()){selDate=td.dataset.date;markSel();renderAgenda();return;} // 모바일: 막대가 작아서 칸 전체 = 날짜 선택
       const chip=ev.target.closest(".ev");
       if(chip){openEventModal(byId(db.events,chip.dataset.ev));}
       else{openEventModal(null,td.dataset.date);}
     };
   });
+  // 선택한 날이 보고 있는 달이 아니면: 이번 달이면 오늘, 아니면 1일
+  if(!selDate||selDate.slice(0,7)!==viewY+"-"+pad(viewM+1)){
+    selDate=todayStr.slice(0,7)===viewY+"-"+pad(viewM+1)?todayStr:viewY+"-"+pad(viewM+1)+"-01";
+  }
+  markSel();renderAgenda();
   fitCalCells();
 }
+
+/* ---------- 모바일: 선택한 날의 일정 목록 ---------- */
+let selDate="";
+const mobileMq=window.matchMedia("(max-width:640px)");
+function isMobileUi(){return mobileMq.matches;}
+function markSel(){document.querySelectorAll("#calBody td").forEach(td=>td.classList.toggle("sel",td.dataset.date===selDate));}
+function renderAgenda(){
+  const [y,m,d]=selDate.split("-").map(Number), dow="일월화수목금토"[new Date(y,m-1,d).getDay()];
+  document.getElementById("agTitle").textContent=m+"월 "+d+"일 ("+dow+")";
+  const list=liveEvents().filter(e=>e.date===selDate)
+    .sort((a,b)=>(a.start||"").localeCompare(b.start||"")||(a.title||"").localeCompare(b.title||""));
+  document.getElementById("agList").innerHTML=list.length?list.map(e=>
+    "<div class='ag-it"+(e.done?" done":"")+"' data-ev='"+e.id+"'"+(evColor(e.color)?" style='--c:"+e.color+"'":"")+">"+
+      "<div class='ag-time'>"+(e.start?esc(e.start)+(e.end?"~"+esc(e.end):""):"종일")+"</div>"+
+      "<div><div class='ag-title'>"+(e.done?"✔ ":"")+esc(e.title)+"</div>"+(e.memo?"<div class='ag-memo'>"+esc(e.memo)+"</div>":"")+"</div>"+
+    "</div>").join(""):"<div class='ag-empty'>일정이 없습니다.</div>";
+  document.querySelectorAll("#agList .ag-it").forEach(it=>it.onclick=()=>openEventModal(byId(db.events,it.dataset.ev)));
+}
+document.getElementById("agAdd").onclick=()=>openEventModal(null,selDate);
 
 /* 셀 높이에 들어가는 만큼만 일정을 보이고 나머지는 +N 으로 */
 function fitCalCells(){
@@ -13073,17 +13176,29 @@ function handleScannedString(s){
     const parts=s.split("|");
     if(parts.length>=4 && /^\d+$/.test(parts[1]) && /^\d+$/.test(parts[2])){
       const i=+parts[1], n=+parts[2], chunk=parts.slice(3).join("|");
+      if(i<1||i>n)return {status:"invalid"};
+      // 이미 받던 QR 묶음과 총 장수가 다르면 다른 내보내기의 QR → 섞지 않음
+      if(scanBuf.n&&scanBuf.n!==n&&scanBuf.rec&&Object.keys(scanBuf.rec).length)return {status:"mismatch",i,n};
       scanBuf.n=n; scanBuf.rec=scanBuf.rec||{}; scanBuf.rec[i]=chunk;
       const got=Object.keys(scanBuf.rec).length;
-      if(got<n){return {status:"partial",got,n};}
-      let full=""; for(let k=1;k<=n;k++){if(!scanBuf.rec[k])return{status:"partial",got,n};full+=scanBuf.rec[k];}
-      return {status:"complete",text:full};
+      if(got<n){return {status:"partial",got,n,i};}
+      let full=""; for(let k=1;k<=n;k++){if(!scanBuf.rec[k])return{status:"partial",got,n,i};full+=scanBuf.rec[k];}
+      return {status:"complete",text:full,i,n};
     }
     // 단일(헤더 없는 전체 텍스트) : PSYNC1|<base64>
     return {status:"complete",text:s};
   }
   return {status:"invalid"};
 }
+/* QR 조각 수신 현황 (사진·카메라 공통): 받은 번호는 초록, 못 받은 번호는 (markMissing 이면) 빨강 */
+function missingChunks(){const n=scanBuf.n||0,rec=scanBuf.rec||{},m=[];for(let i=1;i<=n;i++)if(!rec[i])m.push(i);return m;}
+function chunkGridHtml(markMissing){
+  const n=scanBuf.n; if(!n)return "";
+  const rec=scanBuf.rec||{}; let h="<div class='chunks' id='chunkGrid'>";
+  for(let i=1;i<=n;i++)h+="<span class='ck"+(rec[i]?" ok":markMissing?" miss":"")+"' data-ck='"+i+"' title='"+i+"번 QR "+(rec[i]?"읽음":"아직 못 읽음")+"'>"+i+"</span>";
+  return h+"</div>";
+}
+const numList=(a)=>a.map(x=>x+"번").join(", ");
 function decodePatchText(text){
   let t=text;
   if(t.startsWith(PREFIX+"|"))t=t.slice(PREFIX.length+1);
@@ -13138,7 +13253,8 @@ function startCamera(){
           const code=jsQR(img.data,img.width,img.height,{inversionAttempts:"attemptBoth"});
           if(code&&code.data){
             const r=handleScannedString(code.data);
-            if(r.status==="partial"){stat.innerHTML="조각 수신: <b>"+r.got+" / "+r.n+"</b> … 다음 QR을 비추세요";}
+            if(r.status==="partial"){stat.innerHTML="QR <b>"+r.got+" / "+r.n+"</b>장 읽음 (방금 "+r.i+"번) · 남은 QR: <b>"+numList(missingChunks())+"</b>"+chunkGridHtml(false);}
+            else if(r.status==="mismatch"){stat.innerHTML="⚠ 다른 내보내기의 QR입니다 (총 "+r.n+"장 중 "+r.i+"번). 지금 읽는 QR은 총 "+scanBuf.n+"장 · 남은 QR: <b>"+numList(missingChunks())+"</b>"+chunkGridHtml(false);}
             else if(r.status==="complete"){stop();try{const p=decodePatchText(r.text);closeModal();showReview(p);}catch(e){stat.innerHTML="⚠ 해석 실패: "+esc(e.message);}return;}
             else{stat.textContent="QR 형식이 아닙니다. (이 앱의 QR인지 확인)";}
           }
@@ -13187,28 +13303,74 @@ function decodeImageAll(img){              // 한 사진에서 모든 QR을 추�
   }
   return [...out];
 }
-document.getElementById("impImgBtn").onclick=()=>document.getElementById("impImg").click();
-document.getElementById("impImg").onchange=(e)=>{
-  resetScan();
-  const files=[...e.target.files]; let idx=0; const strings=[];
-  const finish=()=>{
-    resetScan(); let done=null;
-    for(const s of strings){const r=handleScannedString(s);if(r.status==="complete"){done=r;break;}}
-    if(done){try{const p=decodePatchText(done.text);e.target.value="";showReview(p);return;}catch(err){}}
-    const n=scanBuf.n, got=scanBuf.rec?Object.keys(scanBuf.rec).length:0;
-    if(n&&got<n) alert("QR "+n+"장 중 "+got+"장을 읽었습니다.\n안 읽힌 장을 더 선명하게(꽉 차게·정면·밝게) 찍어 함께 선택해 주세요.\n한 사진에 여러 QR이 같이 나와도 됩니다.");
-    else if(!strings.length) alert("이미지에서 QR을 찾지 못했습니다.\n\n• QR이 화면에 꽉 차도록 가까이\n• 화면 밝기 최대, 반사·기울기 없이 정면\n• 초점 맞은 선명한 사진\n으로 다시 촬영해 주세요.\n\n그래도 안 되면 ‘파일로 내보내기 → 이메일’ 경로를 쓰세요.");
-    else alert("QR을 읽었지만 완성하지 못했습니다. 모든 장을 다시 선택해 주세요.");
-    e.target.value="";
-  };
-  const next=()=>{
-    if(idx>=files.length){finish();return;}
-    const f=files[idx++], img=new Image();
-    img.onload=()=>{decodeImageAll(img).forEach(s=>strings.push(s));URL.revokeObjectURL(img.src);next();};
-    img.onerror=()=>{URL.revokeObjectURL(img.src);next();};
-    img.src=URL.createObjectURL(f);
-  };
-  next();
+/* ---------- QR 사진으로 가져오기: 진행 상태 · 사진별 결과 · 못 읽은 QR 번호 ----------
+   '사진 더 추가'로 이어서 고르면 이미 읽은 QR 조각은 유지하고 모자란 번호만 채운다. */
+let photoLog=[]; // [{name, nums:[번호], other:앱QR아님 개수, mism:[다른 내보내기 번호], err:불러오기 실패}]
+document.getElementById("impImgBtn").onclick=()=>{resetScan();photoLog=[];document.getElementById("impImg").click();};
+const nextFrame=()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))); // 화면 갱신 기회를 준 뒤 다음 사진 분석
+function loadImageFile(f){
+  return new Promise(res=>{const img=new Image(),url=URL.createObjectURL(f);
+    img.onload=()=>{URL.revokeObjectURL(url);res(img);};img.onerror=()=>{URL.revokeObjectURL(url);res(null);};img.src=url;});
+}
+function photoLogHtml(){
+  if(!photoLog.length)return "";
+  return "<div class='photolog' id='photoLog'>"+photoLog.map((p,k)=>{
+    let r;
+    if(p.err)r="<span class='bad'>사진을 열 수 없음</span>";
+    else if(!p.nums.length&&!p.other&&!p.mism.length)r="<span class='bad'>QR 못 찾음</span>";
+    else r=[p.nums.length?"QR "+numList(p.nums):"",p.mism.length?"<span class='bad'>다른 내보내기 QR("+numList(p.mism)+")</span>":"",p.other?"<span class='bad'>이 앱의 QR 아님 "+p.other+"개</span>":""].filter(Boolean).join(" · ");
+    return "<div data-photo='"+k+"'><span class='nm'>"+(k+1)+". "+esc(p.name)+"</span><span>"+r+"</span></div>";
+  }).join("")+"</div>";
+}
+function showImportProgress(o){
+  // o: {done, total, label, msg, err, final}
+  const html=`
+    <h3>QR 사진으로 가져오기</h3>
+    <div class="small mut" id="impStep">${esc(o.label||"")}</div>
+    <div class="pbar"><i id="impBar" style="width:${o.total?Math.round(o.done/o.total*100):0}%"></i></div>
+    ${scanBuf.n?`<div class="small" id="impCount">QR <b>${scanBuf.n-missingChunks().length} / ${scanBuf.n}</b>장 읽음</div>`:""}
+    ${chunkGridHtml(!!o.final)}
+    ${o.msg?`<div class="imp-msg${o.err?" err":""}" id="impMsg">${o.msg}</div>`:""}
+    ${photoLogHtml()}
+    <div class="row" style="margin-top:14px"><span class="spacer"></span>
+      ${o.final?'<button class="btn ghost" id="m_cancel">닫기</button><button class="btn pri" id="impMore">🖼 사진 더 추가</button>':'<span class="small mut">분석 중…</span>'}
+    </div>`;
+  modal(html,(root)=>{
+    const c=root.querySelector("#m_cancel"); if(c)c.onclick=closeModal;
+    const more=root.querySelector("#impMore"); if(more)more.onclick=()=>document.getElementById("impImg").click(); // 읽은 조각 유지
+  });
+}
+document.getElementById("impImg").onchange=async(e)=>{
+  const files=[...e.target.files]; e.target.value=""; if(!files.length)return;
+  let complete=null;
+  for(let k=0;k<files.length&&!complete;k++){
+    showImportProgress({done:k,total:files.length,label:"사진 "+(k+1)+" / "+files.length+" 분석 중… ("+files[k].name+")"});
+    await nextFrame();
+    const img=await loadImageFile(files[k]);
+    const entry={name:files[k].name,nums:[],other:0,mism:[],err:!img};
+    photoLog.push(entry);
+    for(const str of img?decodeImageAll(img):[]){
+      const r=handleScannedString(str);
+      if(r.status==="invalid")entry.other++;
+      else if(r.status==="mismatch")entry.mism.push(r.i);
+      else{ if(r.i&&!entry.nums.includes(r.i))entry.nums.push(r.i); if(r.status==="complete"){complete=r;} }
+    }
+    entry.nums.sort((a,b)=>a-b);
+  }
+  const total=files.length;
+  if(complete){
+    try{const p=decodePatchText(complete.text);closeModal();showReview(p);return;}
+    catch(err){
+      showImportProgress({done:total,total,final:true,err:true,label:"분석 완료",
+        msg:"QR "+(scanBuf.n||1)+"장을 모두 읽었지만 내용을 해석하지 못했습니다 ("+esc(err.message)+").<br>서로 다른 내보내기의 QR이 섞였을 수 있습니다. 보내는 화면의 QR만 다시 찍어 처음부터 가져오세요."});
+      resetScan();return;
+    }
+  }
+  const miss=missingChunks();
+  let msg;
+  if(scanBuf.n)msg="QR "+scanBuf.n+"장 중 <b>"+(scanBuf.n-miss.length)+"장</b>을 읽었습니다. 못 읽은 QR: <b id='impMissing'>"+numList(miss)+"</b><br>보내는 화면에서 <b>이 번호의 QR</b>을 꽉 차게·정면·밝게 다시 찍어 <b>사진 더 추가</b>로 선택하세요. (이미 읽은 번호는 유지됩니다)";
+  else msg="사진에서 이 앱의 QR을 찾지 못했습니다.<br>• QR이 화면에 꽉 차도록 가까이 &nbsp;• 화면 밝기 최대, 반사·기울기 없이 정면 &nbsp;• 초점 맞은 선명한 사진<br>그래도 안 되면 ‘파일로 내보내기 → 이메일’ 경로를 쓰세요.";
+  showImportProgress({done:total,total,final:true,err:true,label:"분석 완료 — 사진 "+total+"장",msg});
 };
 
 /* 패치 파일 업로드 */

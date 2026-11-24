@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code PreToolUse(Bash) 훅: Claude 가 git commit 하기 전에 관련 화면 E2E(PC · iPhone · Android) 통과 여부를 확인합니다.
+# Claude Code PreToolUse(Bash) 훅: Claude 가 git commit 하기 전에 관련 화면 E2E(PC · 태블릿 · iPhone · Android) 통과 여부를 확인합니다.
 #   통과 기록이 지금 스테이징된 내용과 같거나 테스트와 무관한 변경이면 그대로 커밋, 아니면 차단(exit 2)하고 e2e 스킬로 안내.
 HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HOOK_DIR/../.." && pwd)"

@@ -1,6 +1,6 @@
 // 화면 E2E: 기기 간 동기화 (파일로 내보내기 → 다른 기기에서 패치 파일 열기 → 미리보기 → 적용)
 //   두 기기는 서로 다른 브라우저 컨텍스트(저장소가 분리됨)로 흉내 낸다.
-import { test, expect, startScenario, preparePage, openApp, makeDb, ev, mt, openTab, chip, modalBox, readDb, expectDialog, download, expectBarColor } from "./support/scenario.js";
+import { test, expect, startScenario, preparePage, openApp, makeDb, ev, mt, openTab, chip, modalBox, readDb, expectDialog, download, expectBarColor, openEvent } from "./support/scenario.js";
 
 /** 같은 기기 설정(화면 크기·UA·터치)으로 두 번째 기기를 연다 */
 async function openOtherDevice(browser, testInfo, db) {
@@ -86,9 +86,9 @@ test("4-2 내보낸 뒤 수정·삭제한 일정은 다음 내보내기에 변�
   });
   await step("[내부] 디자인 리뷰 → 종료 처리, 회고 → 삭제", async () => {
     await openTab(page, "달력");
-    await chip(page, "2026-11-25", "디자인 리뷰").click();
+    await openEvent(page, "2026-11-25", "디자인 리뷰");
     await page.locator("#m_done").click();
-    await chip(page, "2026-11-27", "회고").click();
+    await openEvent(page, "2026-11-27", "회고");
     await page.locator("#m_del").click();
     await expect(chip(page, "2026-11-27", "회고")).toHaveCount(0);
   });

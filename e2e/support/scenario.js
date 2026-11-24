@@ -107,9 +107,27 @@ export async function openTab(page, name) {
 export const dayCell = (page, date) => page.locator(`#calBody td[data-date="${date}"]`);
 /** 날짜 칸의 빈 곳(날짜 숫자)을 눌러 '일정 추가' 창 열기 — 일정 칩을 누르면 수정 창이 열리므로 숫자를 누른다 */
 export async function clickDay(page, date) {
-  await dayCell(page, date).locator(".dnum").click();
+  await selectDay(page, date);
+  if (isMobileView(page)) await page.locator("#agAdd").click(); // 모바일: 날짜 선택 → 아래 목록의 '+ 일정 추가'
   await expect(modalBox(page)).toBeVisible();
 }
+/** 날짜 칸 누르기 (PC·태블릿: 일정 추가 창이 열림 / 모바일: 그 날짜가 선택되고 아래 일정 목록이 바뀜) */
+export async function selectDay(page, date) {
+  await dayCell(page, date).locator(".dnum").click();
+  if (isMobileView(page)) await expect(dayCell(page, date)).toHaveClass(/\bsel\b/);
+}
+/** 일정 수정 창 열기 (PC·태블릿: 달력의 일정 칩 클릭 / 모바일: 날짜 선택 → 아래 목록의 일정 클릭) */
+export async function openEvent(page, date, title) {
+  if (isMobileView(page)) {
+    await selectDay(page, date);
+    await agendaItem(page, title).click();
+  } else {
+    await chip(page, date, title).click();
+  }
+  await expect(modalBox(page)).toBeVisible();
+}
+/** 모바일: 선택한 날의 일정 목록 항목 */
+export const agendaItem = (page, title) => page.locator("#agList .ag-it", { hasText: title });
 /** 날짜 칸 안의 일정 칩 (보이는 것만 고르려면 .filter({ visible: true })) */
 export const chip = (page, date, title) => dayCell(page, date).locator(".ev", { hasText: title });
 /** 열려 있는 모달 창 */
@@ -117,14 +135,15 @@ export const modalBox = (page) => page.locator("#modalRoot .modal");
 
 /**
  * 일정 막대가 color(예: "#30a46c", 생략하면 현재 디자인의 대표색)의 반투명 채움으로 칠해졌는지 확인.
- * 같은 칸에 같은 규칙(color-mix … var(--ev-fill), transparent)으로 칠한 비교용 요소를 만들어 실제 계산된 배경색끼리 비교한다.
+ * 같은 칸에 같은 규칙(color-mix … 막대의 불투명도(--ev-a), transparent)으로 칠한 비교용 요소를 만들어 실제 계산된 배경색끼리 비교한다.
+ * (불투명도는 디자인마다, 그리고 모바일에서 달라지므로 막대 자신의 --ev-a 값을 쓴다)
  * (브라우저마다 color-mix 결과 표기가 달라 숫자를 직접 적지 않음) 왼쪽 띠가 없는지도 함께 확인.
  */
 export async function expectBarColor(locator, color) {
   await expect.poll(() => locator.evaluate((el, color) => {
     const c = color || getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
     const probe = document.createElement("div");
-    probe.style.background = `color-mix(in srgb, ${c} var(--ev-fill), transparent)`;
+    probe.style.background = `color-mix(in srgb, ${c} ${getComputedStyle(el).getPropertyValue("--ev-a").trim()}, transparent)`;
     el.parentElement.appendChild(probe);
     const want = getComputedStyle(probe).backgroundColor;
     probe.remove();
@@ -177,6 +196,11 @@ function slug(s) {
 /** 모바일 레이아웃(앱의 @media 기준: 폭 640px 이하)으로 실행 중인지 */
 export function isMobileView(page) {
   return page.viewportSize().width <= 640;
+}
+/** 앱 레이아웃 기준의 기기 구분: "pc"(1025px~) | "tablet"(641~1024px) | "mobile"(~640px) */
+export function deviceClass(page) {
+  const w = page.viewportSize().width;
+  return w <= 640 ? "mobile" : w <= 1024 ? "tablet" : "pc";
 }
 
 export const test = base;

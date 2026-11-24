@@ -1,6 +1,6 @@
 ---
 name: e2e
-description: calendar-app(project-calendar-app.html) 변경을 커밋하기 전에 관련 화면 E2E(PC · iPhone · Android)를 실행하고, 실패하면 원인을 분석·수정해 다시 통과시키며, 테스트가 없는 새 기능에는 케이스를 제안·작성한다. git commit 이 'E2E 미검증'으로 차단됐을 때, 사용자가 테스트 실행·실패 분석·케이스 작성을 요청할 때 사용한다.
+description: calendar-app(project-calendar-app.html) 변경을 커밋하기 전에 관련 화면 E2E(PC · 태블릿 · iPhone · Android)를 실행하고, 실패하면 원인을 분석·수정해 다시 통과시키며, 테스트가 없는 새 기능에는 케이스를 제안·작성한다. git commit 이 'E2E 미검증'으로 차단됐을 때, 사용자가 테스트 실행·실패 분석·케이스 작성을 요청할 때 사용한다.
 ---
 
 # E2E 테스트 실행 · 수정 · 케이스 작성
@@ -15,11 +15,11 @@ description: calendar-app(project-calendar-app.html) 변경을 커밋하기 전�
 ## 구성 요소
 | 파일 | 역할 |
 |---|---|
-| `playwright.config.js` | PC(1440×900) · iPhone 14(WebKit) · Android(Pixel 7) 3개 프로젝트, 정적 서버 `e2e/serve.mjs`(포트 5180) 자동 실행 |
+| `playwright.config.js` | PC(1440×900) · 태블릿(iPad gen 7, WebKit) · iPhone 14(WebKit) · Android(Pixel 7) 4개 프로젝트, 기기 태그(`@pc`/`@tablet`/`@mobile`)로 전용 케이스 구분, 정적 서버 `e2e/serve.mjs`(포트 5180) 자동 실행 |
 | `e2e/support/scenario.js` | `startScenario` · `step` · 데이터 만들기(`makeDb`/`ev`/`mt`) · 화면 헬퍼 |
 | `e2e/select-specs.mjs` | 스테이징된 파일 → 실행할 spec 선택. 앱 HTML·설정·`e2e/support` 변경은 전체, spec 만 바뀌면 그 spec, 문서 등은 생략 |
-| `e2e/run-related.sh` | 관련 spec 을 3개 환경에서 실행, 통과 시 `.git/e2e-pass` 에 기록. `--check` 확인만, `--all` 전체 |
-| `e2e/open-report.sh` | 결과 보고서(http://localhost:9323)를 백그라운드로 띄우고 브라우저로 열기 — `run-related.sh` 가 자동 호출 |
+| `e2e/run-related.sh` | 관련 spec 을 4개 환경에서 실행, 통과 시 `.git/e2e-pass` 에 기록. `--check` 확인만, `--all` 전체 |
+| `e2e/open-report.sh` | 결과 보고서(http://localhost:9324)를 백그라운드로 띄우고 브라우저로 열기 — `run-related.sh` 가 자동 호출 |
 | `.claude/hooks/e2e-before-commit.sh` | Claude 의 `git commit` 전에 `--check`. 미검증이면 차단 |
 | `.githooks/pre-commit` | 사람이 커밋할 때 관련 E2E 실행 (`git config core.hooksPath .githooks` 로 설치) |
 | `e2e/README.md` | 실행 구조, 헬퍼 목록, 케이스 목록 (사람용 설명서) |
@@ -43,22 +43,23 @@ git diff --cached                # 무엇이 바뀌었는지
   - 대상 기능과 관련 코드 위치 (`project-calendar-app.html:줄`)
   - 케이스 초안: 번호(아래 번호 체계) · 제목 · 초기 데이터 · 단계 · 기대 결과(화면 표시, localStorage 상태)
   - 질문: "이 케이스를 추가할까요? (추가 / 수정해서 추가 / 이번엔 생략)"
-- **추가**: "케이스 작성 규칙"대로 3개 환경에서 통과하도록 작성 → `git add` → 4단계로 실행.
+- **추가**: "케이스 작성 규칙"대로 해당 환경(공통이면 4개 전부)에서 통과하도록 작성 → `git add` → 4단계로 실행.
 - **생략**: 그대로 4단계로 진행하고, 보고에 "케이스 없이 커밋한 기능"으로 남긴다.
 
 ### 4. 실행
 ```bash
-e2e/run-related.sh               # 관련 spec × PC · iPhone · Android (전체 ≈ 11초)
+e2e/run-related.sh               # 관련 spec × PC · 태블릿 · iPhone · Android (전체 ≈ 18초)
 ```
-- 화면 E2E 가 끝나면(통과·실패 모두) 결과 보고서가 자동으로 열린다 (`e2e/open-report.sh`, http://localhost:9323).
-  - `npm run test:e2e:report` 를 **포그라운드로 직접 실행하지 않는다** (서버가 끝나지 않아 명령이 멈춤). 다시 열 때는 `e2e/open-report.sh`.
+- 화면 E2E 가 끝나면(통과·실패 모두) 결과 보고서가 자동으로 열린다 (`e2e/open-report.sh`, http://localhost:9324).
+  - 다시 열 때는 `e2e/open-report.sh` (= `npm run test:e2e:report`). 보고서 서버가 이미 떠 있으면 브라우저만 연다. `npx playwright show-report` 를 직접 실행하지 않는다 (서버가 끝나지 않아 명령이 멈추고, 이미 떠 있으면 포트 충돌).
+  - 포트는 **9324** (report-form-ui 보고서가 9323 사용). 다른 프로그램이 쓰고 있으면 열지 않고 알린다.
   - 사용자가 원하지 않으면 `E2E_NO_REPORT=1 e2e/run-related.sh`.
 
 ### 5. 실패 분석 (실패한 케이스마다)
 1. 실패 위치와 메시지: `npx playwright test <spec> --project=<환경> -g "<케이스번호>" --reporter=line`
 2. `e2e-results/<케이스>-<환경>/error-context.md` (실패 시점 화면 구조), `e2e-screenshots/<케이스>~<환경>/` 마지막 스크린샷을 Read 로 확인
 3. 알림창 문구가 필요하면 `startScenario` 의 `dialogs` 확인 (브라우저 alert/confirm 은 자동으로 '확인' 처리되어 화면에 안 보임)
-4. **PC 와 모바일 중 한쪽만 실패**하면 `@media(max-width:640px)` 규칙, 칸 크기(모바일 최소 70px), 터치 클릭 위치를 확인
+4. **특정 기기만 실패**하면 그 기기의 `@media` 규칙을 확인한다: 모바일 `(max-width:640px)` — 하단 탭바·색 막대·아래 일정 목록·카드형 회의록·아래 시트 창 / 태블릿 `(641~1024px)` — 큰 버튼·작은 글자. 모바일은 날짜 칸을 누르면 창 대신 날짜가 선택된다는 점에 주의
 5. 판정:
    - **테스트 문제**: 셀렉터가 다른 요소를 잡음, 화면 크기 변경 직후 다시 계산되기 전 값을 읽음(→ `expect.poll` 로 기다림), 이번 변경으로 의도적으로 바뀐 문구·구조 → 테스트를 고친다
    - **앱 버그**: 사용자에게 실제로 문제가 되는 동작 → 앱을 고친다
@@ -74,12 +75,12 @@ e2e/run-related.sh               # 관련 spec × PC · iPhone · Android (전�
   - 실행 대상 spec 과 선택 이유, 환경별 통과/실패 수
   - 고친 내용을 **테스트 수정** / **앱 버그 수정** / **케이스 추가** 로 나눠서 (앱 수정은 파일:줄과 원인)
   - 케이스 없이 커밋한 기능 (사용자가 생략을 선택한 경우)
-  - 결과 보고서 http://localhost:9323 · 스크린샷 갤러리 `npm run test:e2e:shots`
+  - 결과 보고서 http://localhost:9324 · 스크린샷 갤러리 `npm run test:e2e:shots`
 
 ## 금지 사항
 - 테스트를 약하게 만들어 통과시키지 않는다: assertion 삭제·완화, `test.skip`/`fixme`, 의미 없는 `waitForTimeout`, 타임아웃만 늘리기
 - `--no-verify`, `.git/e2e-pass` 직접 작성, `git commit -a` 로 검증을 우회하지 않는다
-- 특정 환경만 통과시키려고 `projects` 에 `grep`/`grepInvert` 를 넣지 않는다 (모든 케이스는 3개 환경 모두 통과해야 함)
+- 실패를 피하려고 기기 태그를 붙이거나 `projects` 의 `grep` 을 바꾸지 않는다. 공통 케이스는 4개 환경 모두 통과해야 한다. 기기 태그는 **레이아웃 자체가 다른 기능**(예: 모바일 하단 탭바, PC 화면 채우기)에만 붙인다
 - 의도된 동작 변경일 수 있는 앱 코드를 임의로 되돌리지 않는다 → 사용자에게 확인
 
 ## 케이스 작성 규칙
@@ -87,8 +88,9 @@ e2e/run-related.sh               # 관련 spec × PC · iPhone · Android (전�
 - 케이스마다 `startScenario(page, testInfo, "<번호>_<이름>", { db })` 로 시작하고 `step()` 으로 단계별 스크린샷을 남긴다.
   - 시계는 **2026-11-24(화) 10:00 (Asia/Seoul)** 에서 시작한다 (`NOW`, `TODAY`). 날짜에 따라 결과가 달라지는 데이터는 이 기준으로 만든다.
   - 초기 데이터: `makeDb({ events: [ev(날짜, 제목, {...})], meetings: [mt(...)] })`. `db: null` 이면 처음 연 상태(기기 지정 창이 뜸).
+  - 기기마다 조작이 다른 동작은 헬퍼를 쓴다: 일정 추가 창 `clickDay`, 수정 창 `openEvent`, 모바일 날짜 선택 `selectDay`, 모바일 목록 항목 `agendaItem`, 기기 구분 `deviceClass(page)`. 공통 케이스 안에서 `if (기기)` 로 기대 결과를 갈라야 한다면 기기 전용 케이스로 분리하는 것을 먼저 검토한다.
   - 두 번째 기기(동기화)는 `sync.spec.js` 의 `openOtherDevice()` 처럼 새 컨텍스트 + `preparePage()`. 그 기기 화면을 찍으려면 `step(제목, fn, otherPage)`.
 - 화면 헬퍼: `openTab`, `dayCell`, `clickDay`, `chip`, `modalBox`, `readDb`(localStorage), `expectDialog`, `download`, `isMobileView`
 - confirm 에 '취소'를 눌러야 하면 `answerConfirm(false)`.
 - 요소는 앱의 `id` 를 우선 사용한다. 화면에 같은 문구가 여러 곳에 있으면(예: 미리보기 안내 문구의 `.tag.cf`) 범위를 좁힌다.
-- 번호 체계: 1 달력·일정, 2 일정 종료, 3 회의록, 4 동기화, 5 설정·백업, 6 디자인·막대 색상. 새 케이스를 추가하면 `e2e/README.md` 의 케이스 목록도 고친다.
+- 번호 체계: 1 달력·일정, 2 일정 종료, 3 회의록, 4 동기화, 5 설정·백업, 6 디자인·막대 색상, 7 기기별 레이아웃(태그 필수). 새 케이스를 추가하면 `e2e/README.md` 의 케이스 목록도 고친다.
