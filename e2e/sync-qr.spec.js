@@ -17,8 +17,8 @@ function manyEvents(count) {
 async function exportQrImages(page, testInfo) {
   await openTab(page, "동기화");
   await page.locator("#expQR").click();
-  const cells = modalBox(page).locator(".qrcell");
-  await expect(cells.first()).toBeVisible();
+  const cells = modalBox(page).locator(".qrcell"); // '전체 보기' 목록 (한 장씩 보기 상태에서는 숨겨져 있어도 DOM 에 있음)
+  await expect(cells.first()).toBeAttached();
   const n = await cells.count();
   const files = [];
   for (let i = 0; i < n; i++) {
@@ -137,6 +137,78 @@ test("4-4 QR이 없는 사진·이 앱이 아닌 QR·다른 내보내기의 QR�
     await chooser.setFiles([blank]);
     await expect(other.locator("#impMsg")).toContainText("이 앱의 QR을 찾지 못했습니다");
     await expect(other.locator("#chunkGrid")).toHaveCount(0);
+  }, other);
+  await other.context().close();
+});
+
+test("4-5 QR 내보내기는 한 장씩 크게 보여 주고 이전·다음 버튼과 ← → 키로 넘긴다", async ({ page }, testInfo) => {
+  const { step } = await startScenario(page, testInfo, "4-5_QR_한장씩_보기", { db: makeDb({ events: manyEvents(24) }) });
+  const one = () => modalBox(page).locator("#qrOneImg img");
+  const srcOf = (i) => modalBox(page).locator(`.qrcell[data-qr="${i}"] img`).getAttribute("src");
+  let n;
+
+  await step("'QR로 내보내기' → 기본은 한 장씩: 1번 QR 크게, '1 / N', 이전 버튼 비활성", async () => {
+    await openTab(page, "동기화");
+    await page.locator("#expQR").click();
+    n = await modalBox(page).locator(".qrcell").count();
+    expect(n).toBeGreaterThan(1);
+    await expect(modalBox(page).locator("#qrAll")).toBeHidden();
+    await expect(page.locator("#qrOneNum")).toHaveText(`1 / ${n}`);
+    await expect(one()).toHaveAttribute("src", await srcOf(1));
+    await expect(page.locator("#qrPrev")).toBeDisabled();
+    await expect(one()).toHaveCSS("cursor", "none"); // 마우스 커서가 QR 을 가리지 않게
+  });
+  await step("'다음 ▶' → 2번", async () => {
+    await page.locator("#qrNext").click();
+    await expect(page.locator("#qrOneNum")).toHaveText(`2 / ${n}`);
+    await expect(one()).toHaveAttribute("src", await srcOf(2));
+  });
+  await step("→ 키 → 3번, ← 키 → 2번", async () => {
+    await page.keyboard.press("ArrowRight");
+    await expect(page.locator("#qrOneNum")).toHaveText(`3 / ${n}`);
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.locator("#qrOneNum")).toHaveText(`2 / ${n}`);
+  });
+  await step("'전체 보기' → 모든 QR 목록, '한 장씩 크게' → 다시 2번", async () => {
+    await page.locator("#qrModeAll").click();
+    await expect(modalBox(page).locator("#qrAll")).toBeVisible();
+    await expect(page.locator("#qrOne")).toBeHidden();
+    await page.locator("#qrModeOne").click();
+    await expect(page.locator("#qrOneNum")).toHaveText(`2 / ${n}`);
+  });
+});
+
+test("4-6 화면 사진에 위·아래 이웃 QR 이 걸쳐 찍혀도 가운데 QR 을 읽는다", async ({ page, browser }, testInfo) => {
+  const { step } = await startScenario(page, testInfo, "4-6_이웃_QR_걸친_사진", { db: makeDb({ events: manyEvents(24) }) });
+  let qr, photo, other;
+
+  await step("[내부] QR 내보내기 → 2번 QR 위아래에 1번 아랫부분·3번 윗부분이 걸친 '화면 사진' 만들기", async () => {
+    qr = await exportQrImages(page, testInfo);
+    const srcs = await Promise.all([1, 2, 3].map((i) => modalBox(page).locator(`.qrcell[data-qr="${i}"] img`).getAttribute("src")));
+    const r = await page.evaluate(async (srcs) => {
+      const imgs = await Promise.all(srcs.map((s) => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.src = s; })));
+      const h = imgs[0].naturalHeight, w = imgs[0].naturalWidth, part = Math.round(h * 0.3), gap = 40;
+      const c = document.createElement("canvas"); c.width = w; c.height = part + gap + h + gap + part;
+      const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height);
+      x.drawImage(imgs[0], 0, part - h);              // 1번: 아래쪽 30% (왼쪽 아래 모서리 표식 포함)
+      x.drawImage(imgs[1], 0, part + gap);            // 2번: 전체
+      x.drawImage(imgs[2], 0, part + gap + h + gap);  // 3번: 위쪽 30% (위쪽 모서리 표식 2개 포함)
+      x.fillStyle = "#333"; x.font = "bold 20px sans-serif"; x.textAlign = "center";
+      x.fillText("1 / n", w / 2, part + gap / 2 + 7); x.fillText("2 / n", w / 2, part + gap + h + gap / 2 + 7);
+      const d = x.getImageData(0, 0, c.width, c.height);
+      const whole = jsQR(d.data, c.width, c.height, { inversionAttempts: "attemptBoth" }); // 사진 전체를 한 번에 읽으면?
+      return { url: c.toDataURL("image/png"), whole: whole ? whole.data.slice(0, 12) : null };
+    }, srcs);
+    expect(r.whole).toBeNull(); // 전제: 사진 전체로는 이웃 QR 때문에 인식되지 않는 상황
+    photo = testInfo.outputPath("screen-photo.png");
+    fs.writeFileSync(photo, Buffer.from(r.url.split(",")[1], "base64"));
+  });
+  other = await openReceiver(browser, testInfo);
+  await step("[외부] 그 사진으로 가져오기 → 사진별 결과에 'QR 2번', 번호 칸 2번 초록", async () => {
+    await other.locator("#impImg").setInputFiles([photo]);
+    await expect(other.locator("#impStep")).toHaveText("분석 완료 — 사진 1장");
+    await expect(other.locator("#photoLog [data-photo]").first()).toContainText("QR 2번");
+    await expect(ck(other, 2)).toHaveClass(/\bok\b/);
   }, other);
   await other.context().close();
 });

@@ -76,6 +76,14 @@
   .qrwrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;background:#fff;padding:14px;border-radius:12px}
   .qrcell{display:flex;flex-direction:column;align-items:center;gap:4px;color:#111;font-size:11px;font-weight:700}
   .qrcell img, .qrcell canvas{image-rendering:pixelated;width:300px;height:300px;background:#fff}
+  .modal.wide{width:min(760px,100%)}
+  .qrbig{padding:18px}
+  .qrbig img{image-rendering:pixelated;width:min(66vh,100%,620px);height:auto;cursor:none;background:#fff} /* 커서가 QR 을 가리지 않게 */
+  .qrnav{margin-top:10px}
+  .qrnum{font-size:20px}
+  .camwrap{position:relative;display:inline-block;max-width:360px;width:100%}
+  .camwrap video{display:block}
+  .camaim{position:absolute;left:15%;top:50%;width:70%;aspect-ratio:1;transform:translateY(-50%);border:3px solid rgba(255,255,255,.85);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.25);pointer-events:none}
   video{width:100%;max-width:360px;border-radius:12px;background:#000}
   .scanstat{font-size:13px;margin-top:8px}
   .rev{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:10px}
@@ -13141,19 +13149,40 @@ function showQR(text,p){
   // 청크 분할: 헤더 PSYNC1|i|n| + payload
   const payload=text; const chunks=[];
   for(let i=0;i<payload.length;i+=QR_CHUNK)chunks.push(payload.slice(i,i+QR_CHUNK));
-  const n=chunks.length;
-  let cells="";
-  chunks.forEach((c,i)=>{
-    const data=PREFIX+"|"+(i+1)+"|"+n+"|"+c;
-    const img=makeQR(data);
-    cells+="<div class='qrcell'>"+img+"<div>"+(i+1)+" / "+n+"</div></div>";
-  });
+  const n=chunks.length, imgs=chunks.map((c,i)=>makeQR(PREFIX+"|"+(i+1)+"|"+n+"|"+c));
+  const cells=imgs.map((img,i)=>"<div class='qrcell' data-qr='"+(i+1)+"'>"+img+"<div>"+(i+1)+" / "+n+"</div></div>").join("");
   modal(`
     <h3>QR 내보내기 (${n}장)</h3>
-    <div class="mut small" style="margin-bottom:8px">일정 ${p.events.length} · 회의록 ${p.meetings.length}건.${n>1?" 총 <b>"+n+"장</b> — 모두 촬영/선택해야 완성됩니다.":""}<br>상대 기기에서 <b>휴대폰 카메라 앱으로 QR을 화면에 꽉 차게, 밝기를 높여 정면</b>으로 찍은 뒤 ‘QR 사진으로 가져오기’로 여세요.</div>
-    <div class="qrwrap">${cells}</div>
+    <div class="mut small" style="margin-bottom:8px">일정 ${p.events.length} · 회의록 ${p.meetings.length}건.${n>1?" 총 <b>"+n+"장</b> — 모두 촬영/선택해야 완성됩니다.":""}<br>
+      <b>한 장씩</b> 화면에 띄워 찍으세요. 이웃 QR이 같이 찍히면 인식이 잘 안 됩니다. 마우스 커서는 QR 밖으로 치워 주세요.<br>
+      상대 기기에서 휴대폰 카메라 앱으로 <b>QR을 꽉 차게, 밝기를 높여 정면</b>으로 찍은 뒤 ‘QR 사진으로 가져오기’로 여세요.</div>
+    ${n>1?`<div class="row" style="margin-bottom:8px"><button class="btn sm" id="qrModeOne">한 장씩 크게</button><button class="btn sm ghost" id="qrModeAll">전체 보기</button>
+      <span class="spacer"></span><span class="small mut">← → 키로 넘기기</span></div>`:""}
+    <div id="qrOne"${n>1?"":" class='hidden'"}>
+      <div class="qrwrap qrbig" id="qrOneImg"></div>
+      <div class="row qrnav"><button class="btn" id="qrPrev">◀ 이전</button><span class="spacer"></span><b id="qrOneNum" class="qrnum"></b><span class="spacer"></span><button class="btn pri" id="qrNext">다음 ▶</button></div>
+    </div>
+    <div class="qrwrap${n>1?" hidden":""}" id="qrAll">${cells}</div>
     <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="btn ghost" id="m_cancel">닫기</button></div>
-  `,(root)=>{root.querySelector("#m_cancel").onclick=()=>{closeModal();offerMarkExported();};});
+  `,(root)=>{
+    root.classList.add("wide");
+    let cur=0;
+    const one=root.querySelector("#qrOne"), all=root.querySelector("#qrAll");
+    const show=()=>{root.querySelector("#qrOneImg").innerHTML=imgs[cur];root.querySelector("#qrOneNum").textContent=(cur+1)+" / "+n;
+      root.querySelector("#qrPrev").disabled=cur===0;root.querySelector("#qrNext").disabled=cur===n-1;};
+    const go=(d)=>{cur=Math.max(0,Math.min(n-1,cur+d));show();};
+    root.querySelector("#qrPrev").onclick=()=>go(-1);
+    root.querySelector("#qrNext").onclick=()=>go(1);
+    const mode=(m)=>{one.classList.toggle("hidden",m!=="one");all.classList.toggle("hidden",m!=="all");
+      const b1=root.querySelector("#qrModeOne"),b2=root.querySelector("#qrModeAll");
+      if(b1){b1.classList.toggle("ghost",m!=="one");b2.classList.toggle("ghost",m!=="all");}};
+    if(n>1){root.querySelector("#qrModeOne").onclick=()=>mode("one");root.querySelector("#qrModeAll").onclick=()=>mode("all");}
+    const onKey=(e)=>{if(!document.body.contains(root)){window.removeEventListener("keydown",onKey);return;}
+      if(e.key==="ArrowRight")go(1);else if(e.key==="ArrowLeft")go(-1);};
+    window.addEventListener("keydown",onKey);
+    show();
+    root.querySelector("#m_cancel").onclick=()=>{window.removeEventListener("keydown",onKey);closeModal();offerMarkExported();};
+  });
 }
 function makeQR(data){
   // 자동 버전 선택. EC level L → 같은 데이터에서 모듈 수가 적어 화면 촬영 인식에 유리
@@ -13228,7 +13257,7 @@ function startCamera(){
   }
   modal(`
     <h3>카메라로 실시간 읽기</h3>
-    <video id="cam" playsinline></video>
+    <div class="camwrap"><video id="cam" playsinline muted autoplay></video><div class="camaim"></div></div>
     <div class="scanstat" id="scanStat">카메라 준비 중…</div>
     <div class="row" style="margin-top:12px"><span class="spacer"></span><button class="btn ghost" id="m_cancel">닫기</button></div>
   `,(root)=>{
@@ -13243,14 +13272,19 @@ function startCamera(){
       return;
     }
     navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}}).then(s=>{
-      stream=s;video.srcObject=s;video.play();stat.textContent="QR을 화면 중앙에 비추세요…";
+      stream=s;video.srcObject=s;video.play().catch(()=>{});stat.textContent="QR 한 장을 가운데 네모 안에 비추세요…";
       const tick=()=>{
         if(done)return;
         if(video.readyState===video.HAVE_ENOUGH_DATA){
           canvas.width=video.videoWidth;canvas.height=video.videoHeight;
           const ctx=canvas.getContext("2d");ctx.drawImage(video,0,0,canvas.width,canvas.height);
           const img=ctx.getImageData(0,0,canvas.width,canvas.height);
-          const code=jsQR(img.data,img.width,img.height,{inversionAttempts:"attemptBoth"});
+          let code=jsQR(img.data,img.width,img.height,{inversionAttempts:"attemptBoth"});
+          if(!code){ // 이웃 QR 이 같이 비치면 위치를 잘못 잡으므로 가운데 70% 만 다시
+            const cs=Math.round(Math.min(canvas.width,canvas.height)*0.7), cx=(canvas.width-cs)>>1, cy=(canvas.height-cs)>>1;
+            const sub=ctx.getImageData(cx,cy,cs,cs);
+            code=jsQR(sub.data,cs,cs,{inversionAttempts:"attemptBoth"});
+          }
           if(code&&code.data){
             const r=handleScannedString(code.data);
             if(r.status==="partial"){stat.innerHTML="QR <b>"+r.got+" / "+r.n+"</b>장 읽음 (방금 "+r.i+"번) · 남은 QR: <b>"+numList(missingChunks())+"</b>"+chunkGridHtml(false);}
@@ -13284,22 +13318,59 @@ function maskRegion(d,w,h,loc){            // 이미 읽은 QR 영역을 흰색�
   maxx=Math.min(w,(maxx|0)+8);maxy=Math.min(h,(maxy|0)+8);
   for(let y=miny;y<maxy;y++){let o=(y*w+minx)*4;for(let x=minx;x<maxx;x++){d.data[o]=d.data[o+1]=d.data[o+2]=255;d.data[o+3]=255;o+=4;}}
 }
-function decodeImageAll(img){              // 한 사진에서 모든 QR을 추출(여러 개 가능)
+/* 한 사진에서 모든 QR 추출 (여러 개 가능)
+   ① 사진 전체를 1000·760px 로 줄여 찾기 (+ 흑백 대비 보정). 원본 해상도(3000px~)는 느리기만 하고 이득이 없어 쓰지 않음
+   ② 화면을 찍으면 위·아래 이웃 QR 의 모서리 표식(네모 3개)이 함께 찍혀 위치를 잘못 잡는 일이 많다.
+      그래서 사진을 겹치는 정사각 영역(짧은 변의 85%·65%·50%)으로 나눠 영역마다 700px 로 줄여 다시 찾는다.
+   onProgress(i, n): 영역 분석 진행 (화면 갱신을 위해 중간중간 쉰다) */
+async function decodeImageAll(img,onProgress){
   const W=img.naturalWidth,H=img.naturalHeight; if(!W||!H)return [];
-  const targets=[1400,1000,760,W], seen=new Set(), out=new Set();
-  for(const t of targets){
-    const scale=Math.min(1,t/W), cw=Math.round(W*scale), ch=Math.round(H*scale), key=cw+"x"+ch;
-    if(seen.has(key)||cw<60||ch<60)continue; seen.add(key);
+  const out=new Set();
+  const scan=(sx,sy,sw,sh,target,variants,maxPass)=>{
+    const sc=Math.min(1,target/Math.max(sw,sh)), cw=Math.round(sw*sc), ch=Math.round(sh*sc);
+    if(cw<60||ch<60)return;
     const c=document.createElement("canvas");c.width=cw;c.height=ch;
-    const ctx=c.getContext("2d",{willReadFrequently:true});ctx.drawImage(img,0,0,cw,ch);
-    for(const variant of [ctx.getImageData(0,0,cw,ch), grayStretch(ctx.getImageData(0,0,cw,ch))]){
-      for(let pass=0;pass<12;pass++){
-        const code=jsQR(variant.data,cw,ch,{inversionAttempts:"attemptBoth"});
+    const ctx=c.getContext("2d",{willReadFrequently:true});ctx.drawImage(img,sx,sy,sw,sh,0,0,cw,ch);
+    const base=ctx.getImageData(0,0,cw,ch);
+    for(const v of variants){
+      const d=v==="gray"?grayStretch(base):new ImageData(new Uint8ClampedArray(base.data),cw,ch);
+      for(let pass=0;pass<maxPass;pass++){
+        const code=jsQR(d.data,cw,ch,{inversionAttempts:"attemptBoth"});
         if(!code||!code.data)break;
         out.add(code.data);
-        maskRegion(variant,cw,ch,code.location);
+        maskRegion(d,cw,ch,code.location); // 읽은 QR 을 지우고 같은 영역에서 다음 QR 탐색
       }
     }
+  };
+  for(const t of [1000,760])scan(0,0,W,H,t,["raw","gray"],12);
+  // 영역: ① 짧은 변 전체 폭 × (1·1.15·1.3배) 길이의 띠 — QR 이 폭을 꽉 채운 사진용 (길이에 여유가 있어 위치 허용 범위가 넓음)
+  //       ② 짧은 변의 85%·70%·55% 정사각 — QR 이 작게 찍힌 사진용
+  // 긴 변 방향(화면에 QR 이 나열된 방향)은 짧은 변의 5~6% 간격으로 촘촘히, 짧은 변 방향은 영역 폭의 절반 간격.
+  // 한 단계에서 새 QR 을 찾으면 다음 단계는 건너뜀 (시간 절약)
+  const m=Math.min(W,H), port=H>=W, L=Math.max(W,H), levels=[];
+  const level=(across,along,stepAlong)=>{ // across: 짧은 변 방향 크기, along: 긴 변 방향 크기
+    along=Math.min(along,L); const wins=[], seen=new Set(), stepAcross=Math.max(1,Math.round(across/2));
+    for(let a=0;;a+=stepAlong){
+      const aa=Math.min(a,L-along);
+      for(let b=0;;b+=stepAcross){
+        const bb=Math.min(b,m-across), key=aa+","+bb;
+        if(!seen.has(key)){seen.add(key);wins.push(port?[bb,aa,across,along]:[aa,bb,along,across]);}
+        if(bb>=m-across)break;
+      }
+      if(aa>=L-along)break;
+    }
+    return wins;
+  };
+  levels.push([1,1.15,1.3].flatMap(k=>level(m,Math.round(m*k),Math.max(1,Math.round(m*0.05)))));
+  for(const f of [0.85,0.7,0.55]){const sz=Math.round(m*f);levels.push(level(sz,sz,Math.max(1,Math.round(m*0.06))));}
+  const total=levels.reduce((a,l)=>a+l.length,0); let k=0;
+  for(const wins of levels){
+    const before=out.size;
+    for(const [x,y,w,h] of wins){
+      if(onProgress&&k%3===0){onProgress(k,total);await nextFrame();}
+      k++; scan(x,y,w,h,700,["raw"],4);
+    }
+    if(out.size>before)break;
   }
   return [...out];
 }
@@ -13349,7 +13420,12 @@ document.getElementById("impImg").onchange=async(e)=>{
     const img=await loadImageFile(files[k]);
     const entry={name:files[k].name,nums:[],other:0,mism:[],err:!img};
     photoLog.push(entry);
-    for(const str of img?decodeImageAll(img):[]){
+    const label="사진 "+(k+1)+" / "+files.length+" 분석 중… ("+files[k].name+")";
+    const strs=img?await decodeImageAll(img,(i,n)=>{
+      const st=document.getElementById("impStep"); if(st)st.textContent=label+" · 영역 "+(i+1)+"/"+n;
+      const bar=document.getElementById("impBar"); if(bar)bar.style.width=Math.round((k+i/n)/files.length*100)+"%";
+    }):[];
+    for(const str of strs){
       const r=handleScannedString(str);
       if(r.status==="invalid")entry.other++;
       else if(r.status==="mismatch")entry.mism.push(r.i);

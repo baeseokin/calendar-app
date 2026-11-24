@@ -48,7 +48,7 @@ git diff --cached                # 무엇이 바뀌었는지
 
 ### 4. 실행
 ```bash
-e2e/run-related.sh               # 관련 spec × PC · 태블릿 · iPhone · Android (전체 ≈ 18초)
+e2e/run-related.sh               # 관련 spec × PC · 태블릿 · iPhone · Android (전체 ≈ 27초)
 ```
 - 화면 E2E 가 끝나면(통과·실패 모두) 결과 보고서가 자동으로 열린다 (`e2e/open-report.sh`, http://localhost:9324).
   - 다시 열 때는 `e2e/open-report.sh` (= `npm run test:e2e:report`). 보고서 서버가 이미 떠 있으면 브라우저만 연다. `npx playwright show-report` 를 직접 실행하지 않는다 (서버가 끝나지 않아 명령이 멈추고, 이미 떠 있으면 포트 충돌).

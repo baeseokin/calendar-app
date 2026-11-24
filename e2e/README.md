@@ -8,10 +8,10 @@
 npm install                                  # 처음 한 번
 npx playwright install chromium webkit       # 브라우저가 없으면 한 번
 
-npm run test:e2e          # 전체 실행: PC · 태블릿 · iPhone · Android = 108개 (약 18초)
-npm run test:e2e:pc       # PC 만      (공통 24 + PC 전용 3)
-npm run test:e2e:tablet   # 태블릿만   (공통 24 + 태블릿 전용 3)
-npm run test:e2e:mobile   # 모바일만   (iPhone·Android 각각 공통 24 + 모바일 전용 3)
+npm run test:e2e          # 전체 실행: PC · 태블릿 · iPhone · Android = 116개 (약 27초)
+npm run test:e2e:pc       # PC 만      (공통 26 + PC 전용 3)
+npm run test:e2e:tablet   # 태블릿만   (공통 26 + 태블릿 전용 3)
+npm run test:e2e:mobile   # 모바일만   (iPhone·Android 각각 공통 26 + 모바일 전용 3)
 npm run test:e2e:shots    # 단계별 스크린샷 갤러리 열기 (e2e-screenshots/index.html)
 npm run test:e2e:report   # Playwright 보고서 열기 (http://localhost:9324, 이미 떠 있으면 브라우저만 다시 엶)
 
@@ -98,6 +98,8 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
 | 4-2 | sync | 변경분만 내보내기: 종료 처리·삭제가 상대 기기에 '수정'·'삭제'로 반영 (충돌 아님) |
 | 4-3 | sync-qr | QR 사진 일부 누락 → 진행 막대·번호 칸(읽음 초록/못 읽음 빨강)·'못 읽은 QR: 2번, N번'·사진별 결과 → '사진 더 추가'로 이어서 완성 → 적용 |
 | 4-4 | sync-qr | QR 없는 사진 / 이 앱이 아닌 QR / 다른 내보내기의 QR 을 사진별로 구분, 처음부터 다시 고르면 초기화 |
+| 4-5 | sync-qr | QR 내보내기 '한 장씩 크게'(기본): 이전·다음 버튼, ← → 키, '전체 보기' 전환, QR 위 마우스 커서 숨김 |
+| 4-6 | sync-qr | 화면 사진에 위·아래 이웃 QR 이 걸쳐 찍혀(사진 전체로는 인식 불가) 도 영역별 재탐색으로 가운데 QR 을 읽음 |
 | 5-1 | settings | 전체 백업 → 전체 삭제 → 백업 복원 |
 | 5-2 | settings | 잘못된 파일로는 복원 안 됨 |
 | 5-3 | settings | CSV 내보내기 (BOM, 상태 열, 쉼표·따옴표·줄바꿈 처리) |
