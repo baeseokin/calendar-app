@@ -8,10 +8,10 @@
 npm install                                  # 처음 한 번
 npx playwright install chromium webkit       # 브라우저가 없으면 한 번
 
-npm run test:e2e          # 전체 실행: PC · 태블릿 · iPhone · Android = 120개 (약 30초)
-npm run test:e2e:pc       # PC 만      (공통 26 + PC 전용 4)
-npm run test:e2e:tablet   # 태블릿만   (공통 26 + 태블릿 전용 4)
-npm run test:e2e:mobile   # 모바일만   (iPhone·Android 각각 공통 26 + 모바일 전용 4)
+npm run test:e2e          # 전체 실행: PC · 태블릿 · iPhone · Android = 124개 (약 30초)
+npm run test:e2e:pc       # PC 만      (공통 27 + PC 전용 4)
+npm run test:e2e:tablet   # 태블릿만   (공통 27 + 태블릿 전용 4)
+npm run test:e2e:mobile   # 모바일만   (iPhone·Android 각각 공통 27 + 모바일 전용 4)
 npm run test:e2e:shots    # 단계별 스크린샷 갤러리 열기 (e2e-screenshots/index.html)
 npm run test:e2e:report   # Playwright 보고서 열기 (http://localhost:9324, 이미 떠 있으면 브라우저만 다시 엶)
 
@@ -95,6 +95,7 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
 | 3-2 | meetings | 주제·확인 사항·비고 검색 |
 | 3-3 | meetings | 회의록 수정·삭제 |
 | 3-4 | meetings | 주제 없으면 저장 안 됨 |
+| 3-5 | meetings | 회의록 최신순 정렬(일자·시간 내림차순), 새로 추가한 최신 회의는 맨 위, 검색 결과도 같은 순서 |
 | 4-1 | sync | 내부 → 파일로 내보내기 → 외부에서 가져오기 (미리보기 '추가', 종료 상태·막대 색상 포함) |
 | 4-2 | sync | 변경분만 내보내기: 종료 처리·삭제가 상대 기기에 '수정'·'삭제'로 반영 (충돌 아님) |
 | 4-3 | sync-qr | QR 사진 일부 누락 → 진행 막대·번호 칸(읽음 초록/못 읽음 빨강)·'못 읽은 QR: 2번, N번'·사진별 결과 → '사진 더 추가'로 이어서 완성 → 적용 |
@@ -106,7 +107,7 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
 | 5-3 | settings | CSV 내보내기 (BOM, 상태 열, 쉼표·따옴표·줄바꿈 처리) |
 | 5-4 | settings | 기기 이름 직접 입력, 새로고침 후 유지 |
 | 6-1 | design | 설정 탭에서 디자인 선택 → 바로 적용·선택 표시, 새로고침 후 유지, 일정 데이터에는 저장 안 됨 |
-| 6-2 | design | 달력 위 '🎨 디자인' 버튼 → 선택 창에서 변경, 설정 탭과 선택 상태 일치 |
+| 6-2 | design | 디자인은 설정 탭에서만 변경 (달력 탭에 디자인 버튼 없음), 바꾼 디자인이 달력에 반영 |
 | 6-3 | design | 일정 막대 색상 선택·저장 (막대 전체 반투명 채움, 왼쪽 띠 없음), 디자인을 바꿔도 유지, '기본'은 디자인 색을 따름 |
 | 6-4 | design | 팔레트에 없는 색상 값은 무시하고 기본색 표시 (가져온 데이터 보호) |
 | 7-1 | responsive | PC: 상단 탭·하단 안내줄, 칸에 일정 제목(11px), 가운데 모달, 회의록 표 `@pc` |

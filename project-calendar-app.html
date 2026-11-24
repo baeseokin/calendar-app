@@ -260,7 +260,6 @@ applyTheme(loadUi().theme); // 화면이 그려지기 전에 적용 (깜빡임 �
         <button class="btn sm ghost" id="closePastBtn" title="종료 시각이 지난 일정을 한 번에 종료 처리">✔ 지난 일정 종료</button>
         <span class="spacer"></span>
         <span class="mut small hint">날짜 칸을 클릭하면 일정 추가</span>
-        <button class="btn sm ghost" id="themeBtn" title="달력 디자인 바꾸기">🎨 디자인</button>
       </div>
       <table class="cal">
         <thead><tr>
@@ -13002,25 +13001,15 @@ function themeCardsHtml(){
 }
 const DEFAULT_VARS={"--panel":"#171a21","--panel2":"#1e222b","--line":"#2a2f3a","--accent":"#4f8cff","--chip":"#2b3550","--ev-fill":"38%",
   "--font":'"Pretendard","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif'};
-function bindThemeCards(container,onPick){
-  container.querySelectorAll(".theme-card").forEach(b=>b.onclick=()=>{
+/* 설정 탭 '화면 디자인' 목록: 누르면 바로 적용·저장하고 목록을 다시 그림 (선택 표시 포함) */
+function renderThemeList(){
+  const el=document.getElementById("themeList"); el.innerHTML=themeCardsHtml();
+  el.querySelectorAll(".theme-card").forEach(b=>b.onclick=()=>{
     const t=applyTheme(b.dataset.theme);
     const ui=loadUi(); ui.theme=t.id; localStorage.setItem(UI_KEY,JSON.stringify(ui));
-    renderThemeList(); fitCalCells(); // 설정 탭 목록은 새로 그려짐 (선택 표시 포함)
-    container.querySelectorAll(".theme-card").forEach(x=>x.classList.toggle("sel",x.dataset.theme===t.id)); // 디자인 선택 창
-    if(onPick)onPick(t);
+    renderThemeList(); fitCalCells();
   });
 }
-function renderThemeList(){
-  const el=document.getElementById("themeList"); el.innerHTML=themeCardsHtml(); bindThemeCards(el);
-}
-document.getElementById("themeBtn").onclick=()=>modal(`
-    <h3>달력 디자인 선택</h3>
-    <div class="mut small">누르면 바로 적용됩니다. 설정 탭에서도 바꿀 수 있어요.</div>
-    <div class="themes" id="themePick">${themeCardsHtml()}</div>
-    <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="btn pri" id="m_cancel">닫기</button></div>
-  `,(root)=>{bindThemeCards(root.querySelector("#themePick"));root.querySelector("#m_cancel").onclick=closeModal;});
-
 /* ---------- 일정 추가/수정 모달 ---------- */
 function openEventModal(ev,date){
   const isNew=!ev;
@@ -13074,7 +13063,8 @@ function openEventModal(ev,date){
 /* ============================= 회의록 ============================= */
 function renderMt(){
   const q=(document.getElementById("mtSearch").value||"").trim();
-  let list=liveMeetings().slice().sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.time||"").localeCompare(b.time||""));
+  // 최신이 맨 위: 일자 내림차순 → 같은 날은 시간 내림차순 → 같으면 나중에 고친 것 먼저
+  let list=liveMeetings().slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.time||"").localeCompare(a.time||"")||(b.updatedAt||0)-(a.updatedAt||0));
   if(q)list=list.filter(m=>((m.topic||"")+(m.check||"")+(m.note||"")).includes(q));
   document.getElementById("mtCount").textContent="총 "+list.length+"건";
   let html="";

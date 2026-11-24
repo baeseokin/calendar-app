@@ -39,24 +39,23 @@ test("6-1 설정 탭에서 디자인을 고르면 바로 적용되고, 새로고
   });
 });
 
-test("6-2 달력 위 '🎨 디자인' 버튼으로 디자인을 바꿀 수 있다", async ({ page }, testInfo) => {
-  const { step } = await startScenario(page, testInfo, "6-2_디자인_선택_달력_버튼");
+test("6-2 디자인은 설정 탭에서만 바꾸고, 달력 탭에는 디자인 버튼이 없다", async ({ page }, testInfo) => {
+  const { step } = await startScenario(page, testInfo, "6-2_디자인은_설정_탭에서만", {
+    db: makeDb({ events: [ev("2026-11-25", "디자인 리뷰", { start: "10:00" })] }),
+  });
 
-  await step("'🎨 디자인' → 디자인 선택 창", async () => {
-    await page.locator("#themeBtn").click();
-    await expect(modalBox(page).getByRole("heading", { name: "달력 디자인 선택" })).toBeVisible();
-    await expect(modalBox(page).locator(".theme-card")).toHaveCount(6);
+  await step("달력 탭: 디자인 버튼 없음 (이전 달·다음 달·오늘·지난 일정 종료만)", async () => {
+    await expect(page.locator(".cal-head").getByRole("button", { name: /디자인/ })).toHaveCount(0);
+    await expect(page.locator(".cal-head button")).toHaveCount(4);
   });
-  await step("'클래식 종이' 선택 → 바로 적용 (창은 열린 채 선택 표시)", async () => {
-    await card(modalBox(page), "클래식 종이").click();
-    await expect(html(page)).toHaveAttribute("data-theme", "paper");
-    await expect(card(modalBox(page), "클래식 종이")).toHaveClass(/sel/);
-  });
-  await step("닫기 → 설정 탭 목록에도 같은 디자인이 선택돼 있음", async () => {
-    await modalBox(page).locator("#m_cancel").click();
-    await expect(modalBox(page)).toHaveCount(0);
+  await step("설정 탭에서 '클래식 종이' 선택 → 달력 탭으로 돌아오면 그 디자인으로 표시", async () => {
     await openTab(page, "설정");
+    await card(page.locator("#themeList"), "클래식 종이").click();
     await expect(card(page.locator("#themeList"), "클래식 종이")).toHaveClass(/sel/);
+    await openTab(page, "달력");
+    await expect(html(page)).toHaveAttribute("data-theme", "paper");
+    await expect.poll(() => bgOf(page)).toBe("rgb(236, 229, 214)");
+    await expect(chip(page, "2026-11-25", "디자인 리뷰")).toBeVisible();
   });
 });
 
@@ -79,9 +78,9 @@ test("6-3 일정 막대 색상을 고르면 막대 전체가 그 색(반투명)�
     expect((await readDb(page)).events[0].color).toBe("#30a46c");
   });
   await step("디자인을 '고대비'로 바꿔도 직접 고른 초록은 유지", async () => {
-    await page.locator("#themeBtn").click();
-    await card(modalBox(page), "고대비").click();
-    await modalBox(page).locator("#m_cancel").click();
+    await openTab(page, "설정");
+    await card(page.locator("#themeList"), "고대비").click();
+    await openTab(page, "달력");
     await expectBarColor(c(), "#30a46c");
   });
   await step("다시 열어 '기본'으로 저장 → 디자인 색(고대비 노랑)을 따름", async () => {

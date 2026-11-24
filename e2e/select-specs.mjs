@@ -8,7 +8,7 @@
 //   - all : 앱(project-calendar-app.html)·설정·테스트 공통 코드 변경 → 전체 실행
 //
 // 이 앱은 HTML 파일 하나에 모든 화면이 들어 있어서, 앱이 바뀌면 화면별로 나눌 수 없으므로 항상 전체를 실행합니다.
-// (전체 실행: PC · 태블릿 · iPhone · Android 120개 ≈ 30초)
+// (전체 실행: PC · 태블릿 · iPhone · Android 124개 ≈ 30초)
 import { execSync } from "child_process";
 import fs from "fs";
 

@@ -46,10 +46,11 @@ test("3-2 주제·확인 사항·비고로 회의록을 검색한다", async ({ 
     }),
   });
 
-  await step("회의록 탭 → 3건, 날짜 순", async () => {
+  await step("회의록 탭 → 3건, 최신 날짜가 맨 위", async () => {
     await openTab(page, "회의록");
     await expect(page.locator("#mtCount")).toHaveText("총 3건");
-    await expect(rows(page).first()).toContainText("킥오프 회의");
+    await expect(rows(page).first()).toContainText("배포 준비");
+    await expect(rows(page).last()).toContainText("킥오프 회의");
   });
   await step("'QA' 검색 → 주제·비고에 QA 가 있는 2건", async () => {
     await page.locator("#mtSearch").fill("QA");
@@ -107,5 +108,36 @@ test("3-4 주제가 없으면 회의록이 저장되지 않는다", async ({ pag
     await expectDialog(dialogs, "주제를 입력하세요");
     await expect(modalBox(page)).toBeVisible();
     expect((await readDb(page)).meetings).toHaveLength(0);
+  });
+});
+
+test("3-5 회의록은 최신이 맨 위(일자·시간 내림차순)로 정렬되고, 새로 추가한 최신 회의도 맨 위에 온다", async ({ page }, testInfo) => {
+  const { step } = await startScenario(page, testInfo, "3-5_회의록_최신순_정렬", {
+    db: makeDb({
+      meetings: [
+        mt("2026-11-10", "킥오프 회의", { time: "10:00" }),
+        mt("2026-11-20", "오전 점검", { time: "09:00" }),
+        mt("2026-11-20", "오후 리뷰", { time: "15:00" }),
+        mt("2026-11-17", "QA 결과 공유", { time: "14:00" }),
+        mt("2026-10-30", "지난달 회고"),
+      ],
+    }),
+  });
+  const topics = () => rows(page).locator("td:nth-child(3)").allTextContents();
+
+  await step("회의록 탭 → 11/20 15:00, 11/20 09:00, 11/17, 11/10, 10/30 순", async () => {
+    await openTab(page, "회의록");
+    await expect.poll(topics).toEqual(["오후 리뷰", "오전 점검", "QA 결과 공유", "킥오프 회의", "지난달 회고"]);
+  });
+  await step("오늘(11/24) 회의 추가 → 맨 위", async () => {
+    await page.locator("#addMt").click();
+    await page.locator("#m_time").fill("11:00");
+    await page.locator("#m_topic").fill("오늘 회의");
+    await page.locator("#m_save").click();
+    await expect.poll(topics).toEqual(["오늘 회의", "오후 리뷰", "오전 점검", "QA 결과 공유", "킥오프 회의", "지난달 회고"]);
+  });
+  await step("검색해도 같은 순서 유지 ('회' 검색)", async () => {
+    await page.locator("#mtSearch").fill("회");
+    await expect.poll(topics).toEqual(["오늘 회의", "킥오프 회의", "지난달 회고"]);
   });
 });

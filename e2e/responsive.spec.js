@@ -58,7 +58,7 @@ test("7-2 태블릿: 터치하기 좋은 버튼 크기, 달력에 일정 제목 
     await expect(page.locator("#agenda")).toBeHidden();
   });
   await step("버튼 높이 34px 이상 (손가락으로 누르기 좋게)", async () => {
-    for (const id of ["#prevM", "#nextM", "#todayBtn", "#closePastBtn", "#themeBtn"]) {
+    for (const id of ["#prevM", "#nextM", "#todayBtn", "#closePastBtn"]) {
       expect((await box(page.locator(id))).height, id).toBeGreaterThanOrEqual(34);
     }
     expect((await box(page.locator(".tabs button").first())).height).toBeGreaterThanOrEqual(40);
