@@ -1,0 +1,101 @@
+// 화면 E2E: 설정 — 기기 이름 · 전체 백업/복원 · CSV 내보내기 · 전체 삭제
+import fs from "fs";
+import { test, expect, startScenario, makeDb, ev, mt, openTab, chip, readDb, expectDialog, download } from "./support/scenario.js";
+
+const sample = () =>
+  makeDb({
+    events: [ev("2026-11-23", "보안 점검", { start: "13:00", end: "14:00", done: true }), ev("2026-11-26", "고객, \"보고\"", { start: "10:00", memo: "쉼표·따옴표 포함" })],
+    meetings: [mt("2026-11-20", "인프라 회의", { time: "10:00", check: "- 서버 증설\n- 백업 2회" })],
+  });
+
+test("5-1 전체 백업 후 데이터를 모두 지워도 백업 복원으로 되돌릴 수 있다", async ({ page }, testInfo) => {
+  const { step, dialogs } = await startScenario(page, testInfo, "5-1_백업_삭제_복원", { db: sample() });
+  let backup;
+
+  await step("설정 탭 → '전체 백업(JSON)' → 백업 파일 저장", async () => {
+    await openTab(page, "설정");
+    backup = await download(page, page.locator("#backupBtn"));
+    expect(backup.name).toMatch(/^psync-backup-.*\.json$/);
+    const json = JSON.parse(backup.text);
+    expect(json.events).toHaveLength(2);
+    expect(json.meetings).toHaveLength(1);
+  });
+  await step("'전체 데이터 삭제' → 확인 → 일정 0 · 회의록 0 (기기 이름은 유지)", async () => {
+    await page.locator("#wipeBtn").click();
+    await expectDialog(dialogs, "모든 일정·회의록을 삭제합니다");
+    await expect(page.locator("#footStat")).toHaveText("일정 0 · 회의록 0");
+    await expect(page.locator("#devBadge")).toHaveText("이 기기: 내부");
+  });
+  await step("'백업 복원' → 백업 파일 선택 → 확인 → '복원 완료'", async () => {
+    await page.locator("#restoreFile").setInputFiles(backup.file);
+    await expectDialog(dialogs, "백업으로 교체");
+    await expectDialog(dialogs, "복원 완료");
+    await expect(page.locator("#footStat")).toHaveText("일정 2 · 회의록 1");
+  });
+  await step("달력에 일정·종료 상태가 그대로 돌아옴", async () => {
+    await openTab(page, "달력");
+    await expect(chip(page, "2026-11-23", "보안 점검")).toHaveClass(/done/);
+    await expect(chip(page, "2026-11-26", "고객")).toBeVisible();
+  });
+});
+
+test("5-2 잘못된 파일로는 복원되지 않는다", async ({ page }, testInfo) => {
+  const { step, dialogs } = await startScenario(page, testInfo, "5-2_잘못된_백업_파일", { db: sample() });
+
+  await step("백업 형식이 아닌 JSON 으로 복원 → '복원 실패', 데이터 그대로", async () => {
+    await openTab(page, "설정");
+    const bad = testInfo.outputPath("bad.json");
+    fs.writeFileSync(bad, JSON.stringify({ hello: "world" }));
+    await page.locator("#restoreFile").setInputFiles(bad);
+    await expectDialog(dialogs, "복원 실패");
+    await expect(page.locator("#footStat")).toHaveText("일정 2 · 회의록 1");
+  });
+});
+
+test("5-3 엑셀(CSV)로 일정·회의록을 내보낸다 (일정에 진행/종료 상태 포함)", async ({ page }, testInfo) => {
+  const { step } = await startScenario(page, testInfo, "5-3_CSV_내보내기", { db: sample() });
+
+  await step("설정 탭 → '엑셀(CSV) 내보내기' → 일정·회의록 파일 2개", async () => {
+    await openTab(page, "설정");
+    const files = [];
+    page.on("download", (d) => files.push(d));
+    await page.locator("#csvBtn").click();
+    await expect.poll(() => files.length).toBe(2);
+    const read = async (d) => ({ name: d.suggestedFilename().normalize("NFC"), text: fs.readFileSync(await d.path(), "utf8") });
+    const [evCsv, mtCsv] = await Promise.all(files.map(read));
+
+    expect(evCsv.name).toMatch(/^일정_.*\.csv$/);
+    expect(evCsv.text.charCodeAt(0)).toBe(0xfeff); // 엑셀 한글 깨짐 방지 BOM
+    const evLines = evCsv.text.slice(1).trim().split("\n");
+    expect(evLines[0]).toBe("날짜,시작,종료,제목,메모,상태,수정시각");
+    expect(evLines[1]).toMatch(/^2026-11-23,13:00,14:00,보안 점검,,종료,/);
+    expect(evLines[2]).toMatch(/^2026-11-26,10:00,,"고객, ""보고""",쉼표·따옴표 포함,진행,/);
+
+    expect(mtCsv.name).toMatch(/^회의록_.*\.csv$/);
+    expect(mtCsv.text).toContain("일자,시간,주제,확인사항,비고,수정시각");
+    expect(mtCsv.text).toContain('2026-11-20,10:00,인프라 회의,"- 서버 증설\n- 백업 2회"');
+  });
+});
+
+test("5-4 기기 이름을 직접 입력해 바꿀 수 있다", async ({ page }, testInfo) => {
+  const { step } = await startScenario(page, testInfo, "5-4_기기_이름_변경");
+
+  await step("설정 탭 → 기기 이름 '내부', 기기 ID 표시", async () => {
+    await openTab(page, "설정");
+    await expect(page.locator("#setLabel")).toHaveValue("내부");
+    await expect(page.locator("#setId")).toHaveValue("dev_e2e");
+  });
+  await step("'직접 입력…' 선택 → 입력칸에 '본사 PC' → 상단 '이 기기: 본사 PC'", async () => {
+    await page.locator("#setLabel").selectOption("__custom");
+    await page.locator("#setLabelCustom").fill("본사 PC");
+    await page.locator("#setLabelCustom").blur();
+    await expect(page.locator("#devBadge")).toHaveText("이 기기: 본사 PC");
+  });
+  await step("새로고침 → 직접 입력 값 유지", async () => {
+    await page.reload();
+    await openTab(page, "설정");
+    await expect(page.locator("#setLabel")).toHaveValue("__custom");
+    await expect(page.locator("#setLabelCustom")).toHaveValue("본사 PC");
+    expect((await readDb(page)).deviceLabel).toBe("본사 PC");
+  });
+});

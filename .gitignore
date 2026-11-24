@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+
+# E2E 테스트 결과물
+e2e-screenshots/
+e2e-report/
+e2e-results/
