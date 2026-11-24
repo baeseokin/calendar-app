@@ -23,6 +23,7 @@ const IGNORE_PATTERNS = [
   /^(docs|\.claude|\.githooks)\//,
   /^e2e\/(select-specs\.mjs|run-related\.sh|open-report\.sh)$/,
   /^(\.gitignore|gen_test_data\.py|test-data\.json)$/,
+  /^pds-diary\.html$/, // 별도 앱(PDS 다이어리) — E2E 대상 아님
   /(^|\/)\.DS_Store$/,
 ];
 

@@ -55,7 +55,7 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
   (`.claude/skills/e2e/SKILL.md`)에 따라 실행 → 실패 원인 분석·수정 → 재실행(최대 3회) 후 커밋합니다.
   새 기능에 맞는 케이스가 없으면 커밋 전에 케이스 초안을 제안합니다.
 - 이미 같은 내용으로 통과했으면 다시 실행하지 않습니다 (스테이징 트리 해시로 비교).
-- 선택 규칙: 앱 HTML·`playwright.config.js`·`package*.json`·`e2e/support` 등 변경 → 전체, spec 만 바뀜 → 그 spec, 문서·`gen_test_data.py`·`test-data.json` → 생략.
+- 선택 규칙: 앱 HTML·`playwright.config.js`·`package*.json`·`e2e/support` 등 변경 → 전체, spec 만 바뀜 → 그 spec, 문서·`gen_test_data.py`·`test-data.json`·`pds-diary.html`(별도 앱, E2E 없음) → 생략.
   (앱이 HTML 한 파일이라 화면별로 나눠 고를 수 없어 앱이 바뀌면 항상 전체를 실행합니다)
 - 화면 E2E 가 끝나면 결과 보고서가 자동으로 브라우저에 열립니다 (http://localhost:9324). 열지 않으려면 `E2E_NO_REPORT=1`.
 - 테스트는 작업 폴더 기준으로 돌기 때문에, 스테이징되지 않은 앱·테스트 변경이 있으면 실행을 거부합니다 (`git add` 후 다시).
