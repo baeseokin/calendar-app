@@ -5,3 +5,6 @@ node_modules/
 e2e-screenshots/
 e2e-report/
 e2e-results/
+
+# 배포용 압축 파일 (HTML 은 저장소에 있음)
+*.zip
