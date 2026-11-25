@@ -26,9 +26,19 @@
   .badge{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--chip);color:var(--chiptxt);border:1px solid var(--line)}
   .badge.int{background:#1d3b2e;color:#9ff0c9;border-color:#2b5c47}
   .badge.ext{background:#3a2e1d;color:#f0d59f;border-color:#5c4a2b}
-  .tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:4px;margin-bottom:12px;flex-wrap:wrap}
-  .tabs button{flex:1;min-width:84px;border:0;background:transparent;color:var(--mut);padding:9px 10px;border-radius:var(--rsm);font-size:13px;font-weight:600}
-  .tabs button.active{background:var(--accent);color:#fff}
+  /* 탭: 크게, 아이콘·이름 분리, 선택된 탭은 강조색 배경 + 그림자, 할 일 수는 빨간 배지 */
+  .tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:6px;margin-bottom:14px;flex-wrap:wrap;
+    box-shadow:0 2px 10px rgba(0,0,0,.12)}
+  .tabs button{flex:1;min-width:96px;display:flex;align-items:center;justify-content:center;gap:8px;position:relative;border:1px solid transparent;background:transparent;
+    color:var(--txt);padding:12px 10px;border-radius:var(--rsm);font-size:15px;font-weight:700;letter-spacing:.2px;transition:background .15s,box-shadow .15s,color .15s}
+  .tabs button .ti{font-size:19px;line-height:1}
+  @media (hover:hover){.tabs button:not(.active):hover{background:color-mix(in srgb,var(--accent) 12%,transparent)}} /* 터치 화면에서는 누른 뒤 배경이 남지 않게 */
+  .tabs button.active{background:var(--accent);color:#fff;box-shadow:0 4px 14px color-mix(in srgb,var(--accent) 45%,transparent)}
+  .tab-count{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--bad);color:#fff;font-size:12px;font-weight:800;
+    display:inline-flex;align-items:center;justify-content:center;line-height:1}
+  .tabs button.active .tab-count{background:#fff;color:var(--accent)}
+  .sec-h{font-size:16px;margin:4px 2px 10px;display:flex;align-items:baseline;gap:8px}
+  .sec-h:not(:first-child){margin-top:18px}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .spacer{flex:1}
@@ -174,7 +184,7 @@
     header.top h1{font-size:15px}
     .btn{min-height:36px}
     .btn.sm{min-height:34px;padding:6px 11px}
-    .tabs button{padding:11px 10px;font-size:14px}
+    .tabs button{padding:13px 10px;font-size:15px}
     .cal-head .hint{display:none}
     .ev{font-size:10.5px;padding:3px 5px}
     table.mt td.check{max-width:300px}
@@ -187,8 +197,10 @@
     header.top{gap:6px}
     header.top h1{font-size:15px;width:100%}
     .tabs{position:fixed;left:0;right:0;bottom:0;margin:0;z-index:40;border-radius:0;border-width:1px 0 0;
-      padding:6px 6px calc(6px + env(safe-area-inset-bottom));flex-wrap:nowrap;gap:2px}
-    .tabs button{min-width:0;padding:8px 2px;font-size:12px}
+      padding:6px 6px calc(6px + env(safe-area-inset-bottom));flex-wrap:nowrap;gap:4px;box-shadow:0 -2px 12px rgba(0,0,0,.18)}
+    .tabs button{min-width:0;flex-direction:column;gap:3px;padding:7px 2px 6px;font-size:12px}   /* 아이콘 위, 이름 아래 */
+    .tabs button .ti{font-size:21px}
+    .tab-count{position:absolute;top:3px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;font-size:10.5px}
     .foot{display:none}
     .panel{padding:10px;border-radius:var(--rsm)}
     #tab-cal .panel{flex:none}
@@ -272,7 +284,7 @@ applyTheme(loadUi().theme); // 화면이 그려지기 전에 적용 (깜빡임 �
    버전은 여기 한 곳에서만 고친다 (주.부.수정). 배포는 `npm run release -- <버전>` 이 이 값과 package.json 을 함께 바꾼다.
    주 버전이 바뀌면 동기화·백업 형식이 달라진 것 → 내부·외부 PC를 함께 바꿔야 함 (CHANGELOG.md 참고)
    제목·화면 아래·설정 탭의 버전 표시는 모두 이 값에서 만든다. */
-const APP_VER="2.0.0";
+const APP_VER="2.1.0";
 document.title="프로젝트 일정·회의 관리 v"+APP_VER+" (오프라인 동기화)";
 </script>
 </head>
@@ -285,12 +297,11 @@ document.title="프로젝트 일정·회의 관리 v"+APP_VER+" (오프라인 �
     <span id="syncInfo" class="badge">마지막 동기화: 없음</span>
   </header>
 
-  <div class="tabs">
-    <button data-tab="cal" class="active">📅 달력</button>
-    <button data-tab="mt">📝 회의록</button>
-    <button data-tab="act">✅ 할 일</button>
-    <button data-tab="sync">🔄 동기화</button>
-    <button data-tab="set">⚙ 설정</button>
+  <div class="tabs" role="tablist">
+    <button data-tab="cal" class="active"><span class="ti">📅</span> <span class="tl">달력</span></button>
+    <button data-tab="mt"><span class="ti">📝</span> <span class="tl">회의록</span></button>
+    <button data-tab="act"><span class="ti">✅</span> <span class="tl">할 일</span> <span class="tab-count hidden" id="actBadge"></span></button>
+    <button data-tab="set"><span class="ti">⚙</span> <span class="tl">동기화·설정</span></button>
   </div>
 
   <!-- 달력 -->
@@ -357,8 +368,10 @@ document.title="프로젝트 일정·회의 관리 v"+APP_VER+" (오프라인 �
     </div>
   </section>
 
-  <!-- 동기화 -->
-  <section id="tab-sync" class="hidden">
+  <!-- 동기화·설정 (한 탭) -->
+  <section id="tab-set" class="hidden">
+    <h2 class="sec-h">🔄 동기화 <span class="mut small">다른 PC·휴대폰과 맞추기</span></h2>
+    <div id="syncArea">
     <div class="panel">
       <strong>1) 내보내기 — 이 기기의 변경 내용을 다른 기기로</strong>
       <div class="grid2" style="margin-top:10px">
@@ -390,10 +403,8 @@ document.title="프로젝트 일정·회의 관리 v"+APP_VER+" (오프라인 �
       </div>
       <div id="impArea" style="margin-top:10px"></div>
     </div>
-  </section>
-
-  <!-- 설정 -->
-  <section id="tab-set" class="hidden">
+    </div>
+    <h2 class="sec-h">⚙ 설정</h2>
     <div class="panel">
       <strong>화면 디자인</strong>
       <span class="mut small" style="margin-left:6px">이 브라우저에만 적용됩니다 (일정 데이터·동기화와 무관)</span>
@@ -12977,8 +12988,8 @@ document.querySelectorAll(".tabs button").forEach(b=>{
   b.onclick=()=>{
     document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
     b.classList.add("active");
-    ["cal","mt","act","sync","set"].forEach(t=>document.getElementById("tab-"+t).classList.toggle("hidden",t!==b.dataset.tab));
-    if(b.dataset.tab==="sync")initSyncDefaults();
+    ["cal","mt","act","set"].forEach(t=>document.getElementById("tab-"+t).classList.toggle("hidden",t!==b.dataset.tab));
+    if(b.dataset.tab==="set")initSyncDefaults();
     if(b.dataset.tab==="act")renderAct();
   };
 });
@@ -14034,7 +14045,7 @@ function refreshBadges(){
   document.getElementById("syncInfo").textContent="마지막 동기화: "+fmtTs(db.lastSyncAt);
   document.getElementById("footStat").textContent="일정 "+liveEvents().length+" · 회의록 "+liveMeetings().length;
   const openN=allActions().filter(x=>!x.a.done).length;
-  document.querySelector(".tabs button[data-tab=act]").textContent="✅ 할 일"+(openN?" "+openN:"");
+  const ab=document.getElementById("actBadge"); ab.textContent=openN?String(openN):""; ab.classList.toggle("hidden",!openN); // 안 끝난 할 일 수 (빨간 배지)
 }
 function renderAll(){renderCal();renderMt();renderAct();refreshBadges();initSettings();updateExpSummary&&updateExpSummary();}
 

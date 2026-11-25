@@ -272,15 +272,15 @@ export async function captureAll() {
       ]);
       await shot(p, "act-tab", [p.locator(".tabs"), p.locator("#tab-act .panel")], 14);
       /* 동기화: 내보내기 */
-      await tab(p, "sync");
-      await narrow(p, "#tab-sync .panel");
-      const exp = p.locator("#tab-sync .panel").first();
+      await tab(p, "set");
+      await narrow(p, "#syncArea .panel");
+      const exp = p.locator("#syncArea .panel").first();
       await mark(p, [
         { loc: p.locator("#expFrom").locator("xpath=../.."), n: 1 }, { loc: p.locator("#expChangedOnly").locator("xpath=../.."), n: 2 },
         { loc: p.locator("#expSummary"), n: 3 }, { loc: p.locator("#expFile"), n: 4 }, { loc: p.locator("#expQR"), n: 5 },
       ]);
       await shot(p, "sync-export", exp, 14);
-      const imp = p.locator("#tab-sync .panel").nth(1);
+      const imp = p.locator("#syncArea .panel").nth(1);
       await mark(p, [{ loc: p.locator("#impImgBtn"), n: 1 }, { loc: p.locator("#impFileBtn"), n: 2 }]);
       await shot(p, "sync-import", imp, 14);
       await narrow(p, "", false);
@@ -309,11 +309,15 @@ export async function captureAll() {
       /* 설정 */
       await tab(p, "set");
       await narrow(p, "#tab-set .panel");
+      // 동기화·설정 탭: 설정 구역은 동기화 아래에 있으므로 찍을 부분을 화면 가운데로
+      await centerOn(p.locator("#themeList"));
       await mark(p, [{ loc: p.locator("#themeList .theme-card.sel"), n: 1 }]);
       await shot(p, "design", p.locator("#themeList").locator(".."), 14);
+      await centerOn(p.locator("#setLabel"));
       await mark(p, [{ loc: p.locator("#setLabel"), n: 1 }]);
       await shot(p, "device-label", p.locator("#setLabel").locator("xpath=ancestor::div[contains(@class,'panel')]"), 14);
       const bk = p.locator("#backupBtn").locator("xpath=ancestor::div[contains(@class,'panel')]");
+      await centerOn(bk);
       await mark(p, [{ loc: p.locator("#csvBtn"), n: 1 }, { loc: p.locator("#backupBtn"), n: 2 }, { loc: p.locator("#restoreBtn"), n: 3 }, { loc: p.locator("#wipeBtn"), n: 4 }]);
       await shot(p, "backup", bk, 14);
       await narrow(p, "", false);
@@ -321,7 +325,7 @@ export async function captureAll() {
 
       /* 받는 PC: QR 사진 일부 누락 → 진행 창 */
       const q = await open(browsers, { db: { ...demoDb("외부"), events: [], meetings: [] } });
-      await tab(q, "sync");
+      await tab(q, "set");
       const pick = qrFiles.filter((_, i) => i !== 1 && i !== qrFiles.length - 1);
       await q.locator("#impImg").setInputFiles(pick);
       await q.locator("#impMore").waitFor({ timeout: 60_000 });
@@ -337,7 +341,7 @@ export async function captureAll() {
       other.meetings = [];
       other.lastSyncAt = TS - 2 * 3600_000;
       const r = await open(browsers, { db: other });
-      await tab(r, "sync");
+      await tab(r, "set");
       await r.locator("#impFile").setInputFiles(patchFile);
       await modal(r).locator(".rev").waitFor();
       await mark(r, [
@@ -451,7 +455,7 @@ export async function captureAll() {
       ]);
       await shot(m, "m-act");
       /* 동기화 */
-      await tab(m, "sync");
+      await tab(m, "set");
       await mark(m, [{ loc: m.locator("#expFrom").locator("xpath=../.."), n: 1 }, { loc: m.locator("#expChangedOnly").locator("xpath=../.."), n: 2 }, { loc: m.locator("#expFile"), n: 3 }]);
       await shot(m, "m-sync-export");
       await into(m.locator("#impImgBtn"));
@@ -469,7 +473,7 @@ export async function captureAll() {
 
       /* 휴대폰에서 받기: QR 사진 일부 누락 · 패치 미리보기 */
       const q = await open(browsers, { mobile: true, db: { ...demoDb("휴대폰"), events: [], meetings: [] } });
-      await tab(q, "sync");
+      await tab(q, "set");
       await q.locator("#impImg").setInputFiles(qrFiles.filter((_, i) => i !== 1 && i !== qrFiles.length - 1));
       await q.locator("#impMore").waitFor({ timeout: 60_000 });
       await mark(q, [{ loc: q.locator("#chunkGrid"), n: 1 }, { loc: q.locator("#impMsg"), n: 2 }, { loc: q.locator("#impMore"), n: 3, side: "right" }]);
@@ -478,7 +482,7 @@ export async function captureAll() {
       const other = demoDb("휴대폰");
       other.events = []; other.meetings = [];
       const r = await open(browsers, { mobile: true, db: other });
-      await tab(r, "sync");
+      await tab(r, "set");
       await r.locator("#impFile").setInputFiles(patchFile);
       await modal(r).locator(".rev").waitFor();
       await mark(r, [{ loc: modal(r).locator(".rev .hd"), n: 1 }, { loc: modal(r).locator(".rev .tag.add").first(), n: 2 }]);

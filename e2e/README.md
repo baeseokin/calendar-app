@@ -8,10 +8,10 @@
 npm install                                  # 처음 한 번
 npx playwright install chromium webkit       # 브라우저가 없으면 한 번
 
-npm run test:e2e          # 전체 실행: PC · 태블릿 · iPhone · Android = 168개 (약 35초)
-npm run test:e2e:pc       # PC 만      (공통 38 + PC 전용 4)
-npm run test:e2e:tablet   # 태블릿만   (공통 38 + 태블릿 전용 4)
-npm run test:e2e:mobile   # 모바일만   (iPhone·Android 각각 공통 38 + 모바일 전용 4)
+npm run test:e2e          # 전체 실행: PC · 태블릿 · iPhone · Android = 172개 (약 38초)
+npm run test:e2e:pc       # PC 만      (공통 39 + PC 전용 4)
+npm run test:e2e:tablet   # 태블릿만   (공통 39 + 태블릿 전용 4)
+npm run test:e2e:mobile   # 모바일만   (iPhone·Android 각각 공통 39 + 모바일 전용 4)
 npm run test:e2e:shots    # 단계별 스크린샷 갤러리 열기 (e2e-screenshots/index.html)
 npm run test:e2e:report   # Playwright 보고서 열기 (http://localhost:9324, 이미 떠 있으면 브라우저만 다시 엶)
 
@@ -109,6 +109,7 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
 | 5-3 | settings | CSV 내보내기 3개: 일정(BOM, 종료일·상태·반복·취소사유·연기·회의록 열)·회의록(액션아이템·상태·연결일정)·액션아이템 |
 | 5-4 | settings | 기기 이름 직접 입력, 새로고침 후 유지 |
 | 5-5 | settings | 앱 버전이 제목·화면 아래·설정 탭에 같은 값으로 표시되고 package.json 버전과 같음 (버전 표기 한 곳 유지) |
+| 5-6 | settings | 탭 4개(달력·회의록·할 일·동기화·설정), 선택 탭 강조·할 일 빨간 배지, 동기화·설정 탭에 동기화(위)·설정(아래) 함께, 할 일을 다 끝내면 배지 사라짐 |
 | 6-1 | design | 설정 탭에서 디자인 선택 → 바로 적용·선택 표시, 새로고침 후 유지, 일정 데이터에는 저장 안 됨 |
 | 6-2 | design | 디자인은 설정 탭에서만 변경 (달력 탭에 디자인 버튼 없음), 바꾼 디자인이 달력에 반영 |
 | 6-3 | design | 일정 막대 색상 선택·저장 (막대 전체 반투명 채움, 왼쪽 띠 없음), 디자인을 바꿔도 유지, '기본'은 디자인 색을 따름 |

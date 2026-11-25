@@ -119,3 +119,35 @@ test("5-5 앱 버전이 제목·화면 아래·설정 탭에 같은 값으로 �
     await expect(page.locator("#setVer")).toHaveText(`v${ver}`);
   });
 });
+
+test("5-6 탭은 달력·회의록·할 일·동기화·설정 4개이고, 동기화·설정 탭에 동기화와 설정이 함께 있으며, 선택된 탭이 강조된다", async ({ page }, testInfo) => {
+  const { step } = await startScenario(page, testInfo, "5-6_탭_구성과_강조", {
+    db: makeDb({ meetings: [mt("2026-11-20", "인프라 회의", { actions: [{ id: "a1", text: "견적 요청", owner: "김", due: "", done: false }, { id: "a2", text: "문서 정리", owner: "이", due: "", done: false }] })] }),
+  });
+  const tabs = page.locator(".tabs button");
+
+  await step("탭 4개: 달력 · 회의록 · 할 일(빨간 배지 2) · 동기화·설정, 달력 탭이 강조색", async () => {
+    await expect(tabs).toHaveCount(4);
+    await expect(tabs.locator(".tl")).toHaveText(["달력", "회의록", "할 일", "동기화·설정"]);
+    await expect(page.locator("#actBadge")).toHaveText("2");
+    await expect(page.locator("#actBadge")).toBeVisible();
+    const accent = await page.evaluate(() => getComputedStyle(document.querySelector(".tabs button.active")).backgroundColor);
+    const other = await page.evaluate(() => getComputedStyle(document.querySelector('.tabs button[data-tab="mt"]')).backgroundColor);
+    expect(accent).not.toBe(other);
+    await expect(tabs.first()).toHaveClass(/\bactive\b/);
+  });
+  await step("'동기화·설정' 탭 → 위에 '🔄 동기화'(내보내기·가져오기), 아래에 '⚙ 설정'(디자인·기기·백업)", async () => {
+    await openTab(page, "설정");
+    await expect(page.locator('.tabs button[data-tab="set"]')).toHaveClass(/\bactive\b/);
+    await expect(page.locator("#tab-set .sec-h")).toHaveText([/🔄 동기화/, "⚙ 설정"]);
+    for (const id of ["#expFile", "#expQR", "#impImgBtn", "#impFileBtn", "#themeList", "#setLabel", "#backupBtn"]) await expect(page.locator(id)).toBeAttached();
+    const syncY = (await page.locator("#syncArea").boundingBox()).y, setY = (await page.locator("#themeList").boundingBox()).y;
+    expect(syncY).toBeLessThan(setY);
+    await expect(page.locator("#expSummary")).toContainText("내보낼 내용"); // 탭을 열 때 내보내기 기간·요약이 준비됨
+  });
+  await step("할 일을 모두 끝내면 배지가 사라짐", async () => {
+    await openTab(page, "할 일");
+    for (const t of ["견적 요청", "문서 정리"]) await page.locator("#actList .act-it", { hasText: t }).locator("input[type=checkbox]").click();
+    await expect(page.locator("#actBadge")).toBeHidden();
+  });
+});

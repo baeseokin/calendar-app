@@ -58,7 +58,7 @@ test("4-3 QR 사진 일부를 못 읽으면 못 읽은 QR 번호를 알려 주�
 
   other = await openReceiver(browser, testInfo);
   await step("[외부] 동기화 탭 가져오기 버튼은 'QR 사진으로 가져오기'·'패치 파일 열기' 두 개 (카메라 실시간 읽기 없음)", async () => {
-    const btns = other.locator("#tab-sync .panel").nth(1).locator("button");
+    const btns = other.locator("#syncArea .panel").nth(1).locator("button");
     await expect(btns).toHaveText(["🖼 QR 사진으로 가져오기", "📄 패치 파일 열기"]);
   }, other);
   await step(`[외부] QR 사진 ${picked.length}장 선택 (2번·${n}번 빠짐) → 분석 후 '못 읽은 QR: 2번, ${n}번'`, async () => {

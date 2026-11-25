@@ -100,9 +100,9 @@ export async function openApp(page) {
   await expect(page.locator("#calBody td").first()).toBeVisible();
 }
 
-/** 상단 탭 이동: "달력" | "회의록" | "할 일" | "동기화" | "설정" */
+/** 상단 탭 이동: "달력" | "회의록" | "할 일" | "동기화" | "설정"  (동기화·설정은 한 탭) */
 export async function openTab(page, name) {
-  const key = { 달력: "cal", 회의록: "mt", "할 일": "act", 동기화: "sync", 설정: "set" }[name];
+  const key = { 달력: "cal", 회의록: "mt", "할 일": "act", 동기화: "set", 설정: "set" }[name];
   await page.locator(`.tabs button[data-tab="${key}"]`).click();
   await expect(page.locator(`#tab-${key}`)).toBeVisible();
 }
