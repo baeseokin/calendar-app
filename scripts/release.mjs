@@ -96,7 +96,12 @@ if (dryRun) {
 const branch = git("rev-parse", "--abbrev-ref", "HEAD");
 if (branch !== "main" && !flags.has("--allow-branch")) die(`main 브랜치에서 배포하세요 (지금: ${branch}). 꼭 필요하면 --allow-branch`);
 
-const dirty = git("-c", "core.quotepath=false", "status", "--porcelain").split("\n").filter(Boolean).map((l) => l.slice(3));
+// 바뀐 파일(스테이징 여부 무관) + 새 파일 — 한글 파일 이름이 이스케이프되지 않게 core.quotepath=false
+const lines = (o) => o.split("\n").map((x) => x.trim()).filter(Boolean);
+const dirty = [...new Set([
+  ...lines(git("-c", "core.quotepath=false", "diff", "--name-only", "HEAD")),
+  ...lines(git("-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")),
+])];
 const released = (v) => !!git("tag", "--list", `v${v}`);
 // '준비된 상태' = APP_VER 가 아직 태그 없는 버전이고 CHANGELOG 에 그 항목이 있음 → 같은 명령을 다시 실행하면 그 버전으로 마무리
 const prepared = !released(cur) && changelogSection(cur) !== null;
