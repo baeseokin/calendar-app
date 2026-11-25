@@ -8,3 +8,6 @@ e2e-results/
 
 # 배포용 압축 파일 (HTML 은 저장소에 있음)
 *.zip
+
+# 배포 파일 (npm run release 가 만듦 — GitHub Release 에 올림)
+dist/

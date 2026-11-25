@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>프로젝트 일정·회의 관리 v2 (오프라인 동기화)</title>
+<title>프로젝트 일정·회의 관리 (오프라인 동기화)</title>
 <style>
   :root{
     --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
@@ -259,6 +259,13 @@ function applyTheme(id){
   return t;
 }
 applyTheme(loadUi().theme); // 화면이 그려지기 전에 적용 (깜빡임 방지)
+
+/* ============================= 앱 버전 =============================
+   버전은 여기 한 곳에서만 고친다 (주.부.수정). 배포는 `npm run release -- <버전>` 이 이 값과 package.json 을 함께 바꾼다.
+   주 버전이 바뀌면 동기화·백업 형식이 달라진 것 → 내부·외부 PC를 함께 바꿔야 함 (CHANGELOG.md 참고)
+   제목·화면 아래·설정 탭의 버전 표시는 모두 이 값에서 만든다. */
+const APP_VER="2.0.0";
+document.title="프로젝트 일정·회의 관리 v"+APP_VER+" (오프라인 동기화)";
 </script>
 </head>
 <body>
@@ -413,7 +420,7 @@ applyTheme(loadUi().theme); // 화면이 그려지기 전에 적용 (깜빡임 �
       </div>
     </div>
     <div class="panel">
-      <strong>사용 안내</strong>
+      <strong>사용 안내</strong> <span class="mut small">앱 버전 <b id="setVer"></b></span>
       <div class="mut small" style="margin-top:8px;line-height:1.7">
         • 이 파일 하나만 있으면 됩니다. 인터넷·설치 불필요. 폐쇄망 PC에 복사해서 더블클릭으로 여세요.<br>
         • 데이터는 이 브라우저 안에 저장됩니다(localStorage). 같은 PC·같은 브라우저에서 다시 열면 유지됩니다.<br>
@@ -429,7 +436,7 @@ applyTheme(loadUi().theme); // 화면이 그려지기 전에 적용 (깜빡임 �
   </section>
 </div>
 
-<div class="foot">v2.0 · 오프라인 단일 파일 ·데이터는 이 브라우저에만 저장됩니다 · <span id="footStat"></span></div>
+<div class="foot"><span id="appVer"></span> · 오프라인 단일 파일 · 데이터는 이 브라우저에만 저장됩니다 · <span id="footStat"></span></div>
 
 <div id="modalRoot"></div>
 
@@ -12848,7 +12855,6 @@ const ymd=(d)=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
 const fmtTs=(ms)=>{if(!ms)return"없음";const d=new Date(ms);return d.getFullYear()+"."+pad(d.getMonth()+1)+"."+pad(d.getDate())+" "+pad(d.getHours())+":"+pad(d.getMinutes());};
 // v2: 작은따옴표도 이스케이프 (속성을 '...'로 감싸는 곳이 많아, 빠지면 제목의 ' 때문에 HTML이 깨지거나 스크립트가 끼어들 수 있음)
 const esc=(s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const APP_VER="2.0";
 const mdTxt=(ds)=>{const p=String(ds||"").split("-");return p.length===3?(+p[1])+"/"+(+p[2]):String(ds||"");};
 /* 연기 기록: "YYYY-MM-DD" 또는 "YYYY-MM-DD HH:MM" */
 function parseMoved(s){if(!s)return null;const [date,start]=String(s).split(" ");return /^\d{4}-\d{2}-\d{2}$/.test(date)?{date,start:start||""}:null;}
@@ -13827,6 +13833,7 @@ function renderAll(){renderCal();renderMt();renderAct();refreshBadges();initSett
       </div>
     `,(root)=>{root.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{db.deviceLabel=b.dataset.pick;save();closeModal();renderAll();});}),300);
   }
+  document.getElementById("appVer").textContent=document.getElementById("setVer").textContent="v"+APP_VER;
   renderCal();renderMt();renderAct();refreshBadges();initSettings();renderThemeList();
 })();
 </script>

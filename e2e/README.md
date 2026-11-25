@@ -8,10 +8,10 @@
 npm install                                  # 처음 한 번
 npx playwright install chromium webkit       # 브라우저가 없으면 한 번
 
-npm run test:e2e          # 전체 실행: PC · 태블릿 · iPhone · Android = 144개 (약 31초)
-npm run test:e2e:pc       # PC 만      (공통 32 + PC 전용 4)
-npm run test:e2e:tablet   # 태블릿만   (공통 32 + 태블릿 전용 4)
-npm run test:e2e:mobile   # 모바일만   (iPhone·Android 각각 공통 32 + 모바일 전용 4)
+npm run test:e2e          # 전체 실행: PC · 태블릿 · iPhone · Android = 148개 (약 31초)
+npm run test:e2e:pc       # PC 만      (공통 33 + PC 전용 4)
+npm run test:e2e:tablet   # 태블릿만   (공통 33 + 태블릿 전용 4)
+npm run test:e2e:mobile   # 모바일만   (iPhone·Android 각각 공통 33 + 모바일 전용 4)
 npm run test:e2e:shots    # 단계별 스크린샷 갤러리 열기 (e2e-screenshots/index.html)
 npm run test:e2e:report   # Playwright 보고서 열기 (http://localhost:9324, 이미 떠 있으면 브라우저만 다시 엶)
 
@@ -55,7 +55,7 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
   (`.claude/skills/e2e/SKILL.md`)에 따라 실행 → 실패 원인 분석·수정 → 재실행(최대 3회) 후 커밋합니다.
   새 기능에 맞는 케이스가 없으면 커밋 전에 케이스 초안을 제안합니다.
 - 이미 같은 내용으로 통과했으면 다시 실행하지 않습니다 (스테이징 트리 해시로 비교).
-- 선택 규칙: 앱 HTML·`playwright.config.js`·`package*.json`·`e2e/support` 등 변경 → 전체, spec 만 바뀜 → 그 spec, 문서·`gen_test_data.py`·`test-data.json`·`pds-diary.html`(별도 앱, E2E 없음) → 생략.
+- 선택 규칙: 앱 HTML·`playwright.config.js`·`package*.json`·`e2e/support` 등 변경 → 전체, spec 만 바뀜 → 그 spec, 문서·`gen_test_data.py`·`test-data.json`·`pds-diary.html`(별도 앱, E2E 없음)·`사용자매뉴얼.html`·`scripts/release.mjs` → 생략.
   (앱이 HTML 한 파일이라 화면별로 나눠 고를 수 없어 앱이 바뀌면 항상 전체를 실행합니다)
 - 화면 E2E 가 끝나면 결과 보고서가 자동으로 브라우저에 열립니다 (http://localhost:9324). 열지 않으려면 `E2E_NO_REPORT=1`.
 - 테스트는 작업 폴더 기준으로 돌기 때문에, 스테이징되지 않은 앱·테스트 변경이 있으면 실행을 거부합니다 (`git add` 후 다시).
@@ -107,6 +107,7 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
 | 5-2 | settings | 잘못된 파일로는 복원 안 됨 |
 | 5-3 | settings | CSV 내보내기 3개: 일정(BOM, 상태·취소사유·연기·회의록 열)·회의록(액션아이템·상태·연결일정)·액션아이템 |
 | 5-4 | settings | 기기 이름 직접 입력, 새로고침 후 유지 |
+| 5-5 | settings | 앱 버전이 제목·화면 아래·설정 탭에 같은 값으로 표시되고 package.json 버전과 같음 (버전 표기 한 곳 유지) |
 | 6-1 | design | 설정 탭에서 디자인 선택 → 바로 적용·선택 표시, 새로고침 후 유지, 일정 데이터에는 저장 안 됨 |
 | 6-2 | design | 디자인은 설정 탭에서만 변경 (달력 탭에 디자인 버튼 없음), 바꾼 디자인이 달력에 반영 |
 | 6-3 | design | 일정 막대 색상 선택·저장 (막대 전체 반투명 채움, 왼쪽 띠 없음), 디자인을 바꿔도 유지, '기본'은 디자인 색을 따름 |

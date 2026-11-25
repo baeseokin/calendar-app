@@ -102,3 +102,20 @@ test("5-4 기기 이름을 직접 입력해 바꿀 수 있다", async ({ page },
     expect((await readDb(page)).deviceLabel).toBe("본사 PC");
   });
 });
+
+test("5-5 앱 버전이 제목·화면 아래·설정 탭에 같은 값으로 표시되고 package.json 버전과 같다", async ({ page }, testInfo) => {
+  const { step } = await startScenario(page, testInfo, "5-5_앱_버전_표시");
+  const ver = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+
+  await step(`제목 'v${ver}', 화면 아래 'v${ver}' (모바일은 하단 안내줄이 숨겨짐)`, async () => {
+    expect(ver).toMatch(/^\d+\.\d+\.\d+$/);
+    await expect(page).toHaveTitle(`프로젝트 일정·회의 관리 v${ver} (오프라인 동기화)`);
+    await expect(page.locator("#appVer")).toHaveText(`v${ver}`);
+    expect(await page.evaluate(() => APP_VER)).toBe(ver);
+  });
+  await step(`설정 탭 '사용 안내' 옆 '앱 버전 v${ver}' (모바일에서도 보임)`, async () => {
+    await openTab(page, "설정");
+    await expect(page.locator("#setVer")).toBeVisible();
+    await expect(page.locator("#setVer")).toHaveText(`v${ver}`);
+  });
+});
