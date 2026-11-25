@@ -52,28 +52,31 @@ test("5-2 잘못된 파일로는 복원되지 않는다", async ({ page }, testI
   });
 });
 
-test("5-3 엑셀(CSV)로 일정·회의록을 내보낸다 (일정에 진행/종료 상태 포함)", async ({ page }, testInfo) => {
+test("5-3 엑셀(CSV)로 일정·회의록·액션아이템을 내보낸다 (일정에 진행/종료 상태 포함)", async ({ page }, testInfo) => {
   const { step } = await startScenario(page, testInfo, "5-3_CSV_내보내기", { db: sample() });
 
-  await step("설정 탭 → '엑셀(CSV) 내보내기' → 일정·회의록 파일 2개", async () => {
+  await step("설정 탭 → '엑셀(CSV) 내보내기' → 일정·회의록·액션아이템 파일 3개", async () => {
     await openTab(page, "설정");
     const files = [];
     page.on("download", (d) => files.push(d));
     await page.locator("#csvBtn").click();
-    await expect.poll(() => files.length).toBe(2);
+    await expect.poll(() => files.length).toBe(3);
     const read = async (d) => ({ name: d.suggestedFilename().normalize("NFC"), text: fs.readFileSync(await d.path(), "utf8") });
-    const [evCsv, mtCsv] = await Promise.all(files.map(read));
+    const [evCsv, mtCsv, acCsv] = await Promise.all(files.map(read));
 
     expect(evCsv.name).toMatch(/^일정_.*\.csv$/);
     expect(evCsv.text.charCodeAt(0)).toBe(0xfeff); // 엑셀 한글 깨짐 방지 BOM
     const evLines = evCsv.text.slice(1).trim().split("\n");
-    expect(evLines[0]).toBe("날짜,시작,종료,제목,메모,상태,수정시각");
+    expect(evLines[0]).toBe("날짜,시작,종료,제목,메모,상태,취소사유,원래일정(연기),회의록,수정시각");
     expect(evLines[1]).toMatch(/^2026-11-23,13:00,14:00,보안 점검,,종료,/);
     expect(evLines[2]).toMatch(/^2026-11-26,10:00,,"고객, ""보고""",쉼표·따옴표 포함,진행,/);
 
     expect(mtCsv.name).toMatch(/^회의록_.*\.csv$/);
-    expect(mtCsv.text).toContain("일자,시간,주제,확인사항,비고,수정시각");
+    expect(mtCsv.text).toContain("일자,시간,주제,확인사항,액션아이템,비고,상태,연결일정,수정시각");
     expect(mtCsv.text).toContain('2026-11-20,10:00,인프라 회의,"- 서버 증설\n- 백업 2회"');
+
+    expect(acCsv.name).toMatch(/^액션아이템_.*\.csv$/);
+    expect(acCsv.text.slice(1).trim()).toBe("회의일자,회의주제,할일,담당자,기한,상태"); // 액션아이템이 없으면 머리글만
   });
 });
 

@@ -89,14 +89,15 @@ test("1-4 일정을 수정하고 삭제할 수 있다", async ({ page }, testInf
     await expect(modalBox(page).getByRole("heading", { name: "일정 수정" })).toBeVisible();
     await expect(page.locator("#m_title")).toHaveValue("디자인 리뷰");
   });
-  await step("제목 변경·날짜 27일로 이동 후 저장", async () => {
+  await step("제목 변경·날짜 27일로 이동 후 저장 → 27일에 표시, 25일엔 연기 흔적(취소선 '→ 11/27')", async () => {
     await page.locator("#m_title").fill("디자인 최종 리뷰");
     await page.locator("#m_date").fill("2026-11-27");
     await page.locator("#m_save").click();
-    await expect(chip(page, "2026-11-25", "디자인")).toHaveCount(0);
     await expect(chip(page, "2026-11-27", "디자인 최종 리뷰")).toBeVisible();
+    await expect(chip(page, "2026-11-25", "디자인 최종 리뷰")).toHaveClass(/\bmoved\b/); // v2: 날짜를 바꾸면 기본으로 '연기'로 기록
+    await expect(chip(page, "2026-11-25", "디자인 최종 리뷰")).toContainText("→ 11/27");
   });
-  await step("다시 열어 삭제 → 확인 → 달력에서 사라짐", async () => {
+  await step("다시 열어 삭제 → 확인 → 27일 일정과 25일 연기 흔적 모두 사라짐", async () => {
     await openEvent(page, "2026-11-27", "디자인 최종 리뷰");
     await page.locator("#m_del").click();
     await expectDialog(dialogs, "이 일정을 삭제할까요?");

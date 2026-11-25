@@ -46,11 +46,13 @@ export async function startScenario(page, testInfo, caseId, opts = {}) {
   await preparePage(page, opts);
 
   const dialogs = [];
-  let answer = true;
+  let answer = true, promptText = null;
   page.on("dialog", async (d) => {
     dialogs.push(d.message());
-    if (answer || d.type() === "alert") await d.accept();
-    else await d.dismiss();
+    if (d.type() === "alert") await d.accept();
+    else if (!answer) await d.dismiss();
+    else if (d.type() === "prompt") await d.accept(promptText ?? d.defaultValue());
+    else await d.accept();
   });
 
   let n = 0;
@@ -71,7 +73,9 @@ export async function startScenario(page, testInfo, caseId, opts = {}) {
   const answerConfirm = (v) => { answer = v; };
 
   if (opts.open !== false) await openApp(page);
-  return { step, dialogs, answerConfirm };
+  /** 이후 prompt 입력창에 넣을 글자 (null 이면 기본값 그대로 '확인') */
+  const answerPrompt = (text) => { promptText = text; };
+  return { step, dialogs, answerConfirm, answerPrompt };
 }
 
 /**
@@ -96,9 +100,9 @@ export async function openApp(page) {
   await expect(page.locator("#calBody td").first()).toBeVisible();
 }
 
-/** 상단 탭 이동: "달력" | "회의록" | "동기화" | "설정" */
+/** 상단 탭 이동: "달력" | "회의록" | "할 일" | "동기화" | "설정" */
 export async function openTab(page, name) {
-  const key = { 달력: "cal", 회의록: "mt", 동기화: "sync", 설정: "set" }[name];
+  const key = { 달력: "cal", 회의록: "mt", "할 일": "act", 동기화: "sync", 설정: "set" }[name];
   await page.locator(`.tabs button[data-tab="${key}"]`).click();
   await expect(page.locator(`#tab-${key}`)).toBeVisible();
 }

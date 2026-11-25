@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>프로젝트 일정·회의 관리 (오프라인 동기화)</title>
+<title>프로젝트 일정·회의 관리 v2 (오프라인 동기화)</title>
 <style>
   :root{
     --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
@@ -134,6 +134,32 @@
   .ag-it.done .ag-title{text-decoration:line-through}
   .ag-empty{padding:18px;text-align:center;color:var(--mut);font-size:13px}
 
+  /* ---------- v2: 취소 · 연기 · 회의록 연결 · 액션아이템 ---------- */
+  .ev.cancelled,.ev.moved{text-decoration:line-through;opacity:.55;background:color-mix(in srgb,var(--mut) 22%,transparent)}
+  .ev.moved{font-style:italic}
+  .ag-it.cancelled,.ag-it.moved{opacity:.6;background:color-mix(in srgb,var(--mut) 18%,transparent)}
+  .ag-it.cancelled .ag-title,.ag-it.moved .ag-title{text-decoration:line-through}
+  table.mt tr.cancelled td{text-decoration:line-through;opacity:.55}
+  table.mt tr.cancelled td:last-child{text-decoration:none;opacity:1}
+  .pill.cx{background:#3a1d1d;color:#ffb7b7}
+  .pill.mv{background:#332a12;color:#f0d79a}
+  .info-line{font-size:12px;color:var(--mut);margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .act-row{display:grid;grid-template-columns:22px minmax(0,1fr) 96px 138px 32px;gap:6px;align-items:center;margin-top:6px}
+  .act-row input{min-width:0;width:100%}
+  .act-row input[type=checkbox]{width:18px;height:18px}
+  .act-sum{white-space:normal;margin-top:6px;font-size:12px;line-height:1.6}
+  .act-sum .od{color:var(--bad)}
+  .act-sum .dn{text-decoration:line-through;opacity:.55}
+  .acts{border:1px solid var(--line);border-radius:var(--rsm);overflow:hidden}
+  .act-it{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-top:1px solid var(--line)}
+  .act-it:first-child{border-top:0}
+  .act-it input[type=checkbox]{width:18px;height:18px;margin-top:1px;flex:none}
+  .act-it .txt{font-weight:700;font-size:13.5px;word-break:break-all}
+  .act-it .meta{font-size:12px;color:var(--mut);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+  .act-it .act-mt{cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  .act-it.overdue .due{color:var(--bad);font-weight:700}
+  .act-it.dn .txt{text-decoration:line-through;opacity:.55}
+
   /* ---------- 태블릿 (641~1024px): 터치하기 좋은 크기, 조금 촘촘한 달력 ---------- */
   @media(min-width:641px) and (max-width:1024px){
     .app{padding:10px 12px 44px}
@@ -187,6 +213,14 @@
     /* 모달: 아래에서 올라오는 시트 */
     .modal-bg{align-items:flex-end;padding:0}
     .modal{width:100%;max-height:92vh;border-radius:var(--radius) var(--radius) 0 0;padding:16px 14px calc(16px + env(safe-area-inset-bottom))}
+    /* 액션아이템 입력줄: 할 일 한 줄, 담당자·기한은 다음 줄 */
+    .act-row{grid-template-columns:22px minmax(0,1fr) minmax(0,1fr) 32px}
+    .act-row .a-done{grid-column:1;grid-row:1}
+    .act-row .a-text{grid-column:2/4;grid-row:1}
+    .act-row .a-del{grid-column:4;grid-row:1}
+    .act-row .a-owner{grid-column:2;grid-row:2}
+    .act-row .a-due{grid-column:3;grid-row:2}
+    #tab-act .row select{flex:1}
   }
 </style>
 <script>
@@ -239,6 +273,7 @@ applyTheme(loadUi().theme); // 화면이 그려지기 전에 적용 (깜빡임 �
   <div class="tabs">
     <button data-tab="cal" class="active">📅 달력</button>
     <button data-tab="mt">📝 회의록</button>
+    <button data-tab="act">✅ 할 일</button>
     <button data-tab="sync">🔄 동기화</button>
     <button data-tab="set">⚙ 설정</button>
   </div>
@@ -281,10 +316,29 @@ applyTheme(loadUi().theme); // 화면이 그려지기 전에 적용 (깜빡임 �
       <table class="mt">
         <thead><tr>
           <th style="width:92px">일자</th><th style="width:86px">시간</th>
-          <th style="width:150px">주제</th><th>확인 사항</th><th style="width:120px">비고</th><th style="width:40px"></th>
+          <th style="width:150px">주제</th><th>확인 사항 / 액션아이템</th><th style="width:120px">비고</th><th style="width:40px"></th>
         </tr></thead>
         <tbody id="mtBody"></tbody>
       </table>
+    </div>
+  </section>
+
+  <!-- 액션아이템(할 일) : 모든 회의록의 액션아이템 모아보기 -->
+  <section id="tab-act" class="hidden">
+    <div class="panel">
+      <div class="row" style="margin-bottom:10px">
+        <strong>액션아이템</strong>
+        <span id="actCount" class="mut small"></span>
+        <span class="spacer"></span>
+        <select id="actOwner"><option value="">담당자 전체</option></select>
+        <select id="actFilter">
+          <option value="open">미완료만</option>
+          <option value="all">전체</option>
+          <option value="done">완료만</option>
+        </select>
+      </div>
+      <div id="actList"></div>
+      <div class="mut small" style="margin-top:8px">액션아이템은 회의록 안에서 추가·수정합니다. 여기서는 체크로 완료 처리만 바로 할 수 있어요. (취소된 회의의 항목은 제외)</div>
     </div>
   </section>
 
@@ -365,13 +419,17 @@ applyTheme(loadUi().theme); // 화면이 그려지기 전에 적용 (깜빡임 �
         • 데이터는 이 브라우저 안에 저장됩니다(localStorage). 같은 PC·같은 브라우저에서 다시 열면 유지됩니다.<br>
         • <b>QR 내보내기</b>: 변경 내용을 QR로 한 장씩 띄웁니다 → 휴대폰 카메라 앱으로 찍어 상대 PC에서 "QR 사진으로 가져오기".<br>
         • <b>파일 내보내기</b>: 작은 패치 파일을 저장 → 이메일로 반입/반출 → 상대 PC에서 "패치 파일 열기".<br>
-        • 가져오기 전 <b>미리보기</b>에서 무엇이 바뀌는지 확인하고 적용합니다. <span class="tag cf">양쪽수정</span>은 직접 선택.
+        • 가져오기 전 <b>미리보기</b>에서 무엇이 바뀌는지 확인하고 적용합니다. <span class="tag cf">양쪽수정</span>은 직접 선택.<br>
+        • <b>취소</b>: 일정 창의 "✕ 취소 처리" → 달력에 취소선으로 남습니다(삭제와 다름). <b>연기</b>: 날짜·시간을 바꾸면 원래 자리에 취소선 + "→ 새 날짜"가 남습니다.<br>
+        • <b>회의록 연결</b>: 일정 창의 "📝 회의록 작성"으로 일자·시간·주제가 채워진 회의록을 만듭니다. 회의록이 있는 일정은 달력에 📝 표시.<br>
+        • <b>액션아이템</b>: 회의록 안에서 할 일·담당자·기한을 입력 → "✅ 할 일" 탭에서 모아 보고 완료 체크.<br>
+        • <b>v2 주의</b>: 내부·외부 PC 모두 v2 파일로 바꿔 쓰세요. 한쪽이 구버전이면 취소·연기·연결·액션아이템 정보가 그쪽으로 전달되지 않습니다.
       </div>
     </div>
   </section>
 </div>
 
-<div class="foot">오프라인 단일 파일 · 데이터는 이 브라우저에만 저장됩니다 · <span id="footStat"></span></div>
+<div class="foot">v2.0 · 오프라인 단일 파일 ·데이터는 이 브라우저에만 저장됩니다 · <span id="footStat"></span></div>
 
 <div id="modalRoot"></div>
 
@@ -12788,7 +12846,13 @@ const now=()=>Date.now();
 const pad=(n)=>String(n).padStart(2,"0");
 const ymd=(d)=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
 const fmtTs=(ms)=>{if(!ms)return"없음";const d=new Date(ms);return d.getFullYear()+"."+pad(d.getMonth()+1)+"."+pad(d.getDate())+" "+pad(d.getHours())+":"+pad(d.getMinutes());};
-const esc=(s)=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// v2: 작은따옴표도 이스케이프 (속성을 '...'로 감싸는 곳이 많아, 빠지면 제목의 ' 때문에 HTML이 깨지거나 스크립트가 끼어들 수 있음)
+const esc=(s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const APP_VER="2.0";
+const mdTxt=(ds)=>{const p=String(ds||"").split("-");return p.length===3?(+p[1])+"/"+(+p[2]):String(ds||"");};
+/* 연기 기록: "YYYY-MM-DD" 또는 "YYYY-MM-DD HH:MM" */
+function parseMoved(s){if(!s)return null;const [date,start]=String(s).split(" ");return /^\d{4}-\d{2}-\d{2}$/.test(date)?{date,start:start||""}:null;}
+const fmtMoved=(mf)=>mdTxt(mf.date)+(mf.start?" "+mf.start:"");
 function timeOpts(sel){           // 30분 단위 시간 옵션(00:00~23:30), 빈 값=종일
   let head="<option value=''>--:-- (종일)</option>", body="", found=!sel;
   for(let m=0;m<24*60;m+=30){
@@ -12822,8 +12886,9 @@ document.querySelectorAll(".tabs button").forEach(b=>{
   b.onclick=()=>{
     document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
     b.classList.add("active");
-    ["cal","mt","sync","set"].forEach(t=>document.getElementById("tab-"+t).classList.toggle("hidden",t!==b.dataset.tab));
+    ["cal","mt","act","sync","set"].forEach(t=>document.getElementById("tab-"+t).classList.toggle("hidden",t!==b.dataset.tab));
     if(b.dataset.tab==="sync")initSyncDefaults();
+    if(b.dataset.tab==="act")renderAct();
   };
 });
 
@@ -12833,21 +12898,28 @@ function renderCal(){
   const start=new Date(first); start.setDate(1-first.getDay());
   document.getElementById("calTitle").textContent=viewY+"년 "+(viewM+1)+"월";
   const todayStr=ymd(new Date());
-  const evByDate={};
-  liveEvents().forEach(e=>{(evByDate[e.date]=evByDate[e.date]||[]).push(e);});
+  const evByDate=buildDayMap(), mtSet=meetingEventSet();
   let html="", d=new Date(start);
   for(let w=0;w<6;w++){
     html+="<tr>";
     for(let i=0;i<7;i++){
       const ds=ymd(d), other=d.getMonth()!==viewM, dow=d.getDay();
-      const evs=(evByDate[ds]||[]).sort((a,b)=>(a.start||"").localeCompare(b.start||"")||(a.title||"").localeCompare(b.title||""));
+      const evs=evByDate[ds]||[];
       html+="<td data-date='"+ds+"' class='"+(other?"other ":"")+(ds===todayStr?"today":"")+"'>";
       html+="<div class='dnum "+(dow===0?"sun":dow===6?"sat":"")+"'>"+d.getDate()+"</div>";
       html+="<div class='evs'>";
       evs.forEach(e=>{
-        const tl=(e.start?esc(e.start)+(e.end?"~"+esc(e.end):"")+" ":"")+esc(e.title)+(e.memo?" — "+esc(e.memo):"");
+        if(e.ghost){ // 연기된 일정의 원래 자리: 취소선 + "→ 새 날짜"
+          const r=e.ref;
+          html+="<div class='ev moved' data-ev='"+esc(r.id)+"' title='"+esc("[연기됨 → "+mdTxt(r.date)+(r.start?" "+r.start:"")+"] "+r.title)+"'>"+(e.start?"<b>"+esc(e.start)+"</b> ":"")+esc(r.title)+" → "+esc(mdTxt(r.date))+"</div>";
+          return;
+        }
+        const tl=(e.start?e.start+(e.end?"~"+e.end:"")+" ":"")+e.title+(e.memo?" — "+e.memo:"")+(e.cancelled&&e.cancelReason?" (취소 사유: "+e.cancelReason+")":"");
+        const tag=e.cancelled?"[취소] ":e.done?"[종료] ":"";
         const tp=e.start?"<b>"+esc(e.start)+"</b> ":"";
-        html+="<div class='ev"+(e.done?" done":"")+"' data-ev='"+e.id+"'"+(evColor(e.color)?" style='--c:"+e.color+"'":"")+" title='"+(e.done?"[종료] ":"")+tl+"'>"+(e.done?"✔ ":"")+tp+esc(e.title)+"</div>";
+        const cls=e.cancelled?" cancelled":e.done?" done":"";
+        html+="<div class='ev"+cls+"' data-ev='"+esc(e.id)+"'"+(evColor(e.color)?" style='--c:"+e.color+"'":"")+" title='"+esc(tag+(e.movedFrom?"[연기] ":"")+tl)+"'>"+
+          (e.cancelled?"✕ ":e.done?"✔ ":"")+(e.movedFrom?"↪ ":"")+tp+esc(e.title)+(mtSet.has(e.id)?" 📝":"")+"</div>";
       });
       html+="<div class='more hidden'></div></div>";
       html+="</td>";
@@ -12878,16 +12950,35 @@ let selDate="";
 const mobileMq=window.matchMedia("(max-width:640px)");
 function isMobileUi(){return mobileMq.matches;}
 function markSel(){document.querySelectorAll("#calBody td").forEach(td=>td.classList.toggle("sel",td.dataset.date===selDate));}
+/* 날짜별 일정 목록 (연기된 일정은 원래 날짜에도 'ghost' 항목으로 넣음) */
+function buildDayMap(){
+  const map={}, put=(ds,x)=>(map[ds]=map[ds]||[]).push(x);
+  liveEvents().forEach(e=>{
+    put(e.date,e);
+    const mf=parseMoved(e.movedFrom);
+    if(mf&&mf.date!==e.date)put(mf.date,{ghost:true,ref:e,date:mf.date,start:mf.start,title:e.title});
+  });
+  Object.values(map).forEach(l=>l.sort((a,b)=>(a.start||"").localeCompare(b.start||"")||(a.title||"").localeCompare(b.title||"")));
+  return map;
+}
+/* 회의록이 연결된 일정 id 모음 */
+function meetingEventSet(){return new Set(liveMeetings().map(m=>m.eventId).filter(Boolean));}
 function renderAgenda(){
   const [y,m,d]=selDate.split("-").map(Number), dow="일월화수목금토"[new Date(y,m-1,d).getDay()];
   document.getElementById("agTitle").textContent=m+"월 "+d+"일 ("+dow+")";
-  const list=liveEvents().filter(e=>e.date===selDate)
-    .sort((a,b)=>(a.start||"").localeCompare(b.start||"")||(a.title||"").localeCompare(b.title||""));
-  document.getElementById("agList").innerHTML=list.length?list.map(e=>
-    "<div class='ag-it"+(e.done?" done":"")+"' data-ev='"+e.id+"'"+(evColor(e.color)?" style='--c:"+e.color+"'":"")+">"+
-      "<div class='ag-time'>"+(e.start?esc(e.start)+(e.end?"~"+esc(e.end):""):"종일")+"</div>"+
-      "<div><div class='ag-title'>"+(e.done?"✔ ":"")+esc(e.title)+"</div>"+(e.memo?"<div class='ag-memo'>"+esc(e.memo)+"</div>":"")+"</div>"+
-    "</div>").join(""):"<div class='ag-empty'>일정이 없습니다.</div>";
+  const list=buildDayMap()[selDate]||[], mtSet=meetingEventSet();
+  document.getElementById("agList").innerHTML=list.length?list.map(e=>{
+    const r=e.ghost?e.ref:e, mf=parseMoved(r.movedFrom);
+    const cls=e.ghost?" moved":r.cancelled?" cancelled":r.done?" done":"";
+    const time=e.ghost?(e.start||"종일"):(r.start?r.start+(r.end?"~"+r.end:""):"종일");
+    const pills=(e.ghost?" <span class='pill mv'>→ "+esc(mdTxt(r.date))+" 연기</span>":"")+
+      (!e.ghost&&mf?" <span class='pill mv'>"+esc(fmtMoved(mf))+"에서 연기</span>":"")+
+      (r.cancelled?" <span class='pill cx'>취소</span>":"")+(mtSet.has(r.id)?" 📝":"");
+    const memo=(r.cancelled&&r.cancelReason?"취소 사유: "+r.cancelReason+(r.memo?"\n":""):"")+(r.memo||"");
+    return "<div class='ag-it"+cls+"' data-ev='"+esc(r.id)+"'"+(evColor(r.color)&&!e.ghost?" style='--c:"+r.color+"'":"")+">"+
+      "<div class='ag-time'>"+esc(time)+"</div>"+
+      "<div><div class='ag-title'>"+(r.cancelled?"✕ ":r.done&&!e.ghost?"✔ ":"")+esc(r.title)+"</div>"+pills+(memo?"<div class='ag-memo'>"+esc(memo)+"</div>":"")+"</div>"+
+    "</div>";}).join(""):"<div class='ag-empty'>일정이 없습니다.</div>";
   document.querySelectorAll("#agList .ag-it").forEach(it=>it.onclick=()=>openEventModal(byId(db.events,it.dataset.ev)));
 }
 document.getElementById("agAdd").onclick=()=>openEventModal(null,selDate);
@@ -12959,7 +13050,7 @@ function isPastEvent(e){
   return !!endT&&endT<=hm;
 }
 document.getElementById("closePastBtn").onclick=()=>{
-  const list=liveEvents().filter(e=>!e.done&&isPastEvent(e));
+  const list=liveEvents().filter(e=>!e.done&&!e.cancelled&&isPastEvent(e)); // 취소된 일정은 제외
   if(!list.length){alert("종료 처리할 지난 일정이 없습니다.");return;}
   if(!confirm("끝난 일정 "+list.length+"건을 종료 처리할까요?"))return;
   const ts=now();
@@ -13006,8 +13097,13 @@ function renderThemeList(){
 function openEventModal(ev,date){
   const isNew=!ev;
   const e=ev||{title:"",memo:"",date:date||ymd(new Date())};
+  const linked=isNew?null:liveMeetings().find(m=>m.eventId===e.id);
+  const mf=parseMoved(e.movedFrom);
   modal(`
-    <h3>${isNew?"일정 추가":"일정 수정"}${e.done?' <span class="pill">✔ 종료됨</span>':""}</h3>
+    <h3>${isNew?"일정 추가":"일정 수정"}${e.done?' <span class="pill">✔ 종료됨</span>':""}${e.cancelled?' <span class="pill cx">✕ 취소됨</span>':""}</h3>
+    ${e.cancelled?`<div class="info-line" style="margin:-4px 0 10px">취소 사유: ${esc(e.cancelReason||"(입력 안 함)")}</div>`:""}
+    ${mf?`<div class="info-line" style="margin:-4px 0 10px"><span class="pill mv">연기</span> 원래 일정: <b>${esc(fmtMoved(mf))}</b> → 지금 <b>${esc(mdTxt(e.date))}${e.start?" "+esc(e.start):""}</b>
+      <button type="button" class="btn sm ghost" id="m_clearMove">연기 표시 지우기</button></div>`:""}
     <div class="grid2">
       <label class="fld">날짜<input type="date" id="m_date" value="${esc(e.date)}"></label>
       <label class="fld">제목<input id="m_title" value="${esc(e.title)}" placeholder="예: 심사 요구사항 회의"></label>
@@ -13016,15 +13112,19 @@ function openEventModal(ev,date){
       <label class="fld">시작 시간<select id="m_start">${timeOpts(e.start||"")}</select></label>
       <label class="fld">종료 시간<select id="m_end">${timeOpts(e.end||"")}</select></label>
     </div>
+    ${isNew?"":`<label class="checkrow" style="margin-top:8px"><input type="checkbox" id="m_asMove" checked> 날짜·시작 시간을 바꾸면 <b>연기</b>로 기록 (원래 자리에 취소선으로 남김)</label>`}
     <label class="fld" style="margin-top:10px">메모(선택)<textarea id="m_memo" placeholder="상세 내용">${esc(e.memo||"")}</textarea></label>
     <div class="fld" style="margin-top:10px">막대 색상
       <div class="swatches" id="m_colors">${EV_COLORS.map(c=>`<button type="button" class="sw${c.v?"":" def"}${(evColor(e.color)||"")===c.v?" sel":""}" data-color="${c.v}" title="${c.n}" aria-label="${c.n}"${c.v?` style="background:${c.v}"`:""}></button>`).join("")}</div>
     </div>
+    ${isNew?"":`<div class="info-line" style="margin-top:12px">회의록: ${linked?"<b>"+esc(linked.topic)+"</b>"+(linked.cancelled?' <span class="pill cx">취소</span>':""):"없음"}
+      <button type="button" class="btn sm" id="m_mt">${linked?"📝 회의록 열기":"📝 회의록 작성"}</button></div>`}
     <div class="row" style="margin-top:14px">
       ${isNew?"":'<button class="btn danger sm" id="m_del">삭제</button>'}
-      ${isNew?"":'<button class="btn sm" id="m_done">'+(e.done?"↺ 종료 취소":"✔ 종료 처리")+'</button>'}
+      ${isNew||e.cancelled?"":'<button class="btn sm" id="m_done">'+(e.done?"↺ 종료 취소":"✔ 종료 처리")+'</button>'}
+      ${isNew?"":'<button class="btn sm" id="m_cx">'+(e.cancelled?"↺ 취소 해제":"✕ 취소 처리")+'</button>'}
       <span class="spacer"></span>
-      <button class="btn ghost" id="m_cancel">취소</button>
+      <button class="btn ghost" id="m_cancel">닫기</button>
       <button class="btn pri" id="m_save">저장</button>
     </div>
   `,(root)=>{
@@ -13038,16 +13138,46 @@ function openEventModal(ev,date){
       const color=root.querySelector("#m_colors .sw.sel").dataset.color;
       if(start&&end&&end<start){alert("종료 시간이 시작 시간보다 빠릅니다.");return;}
       if(isNew){db.events.push({id:uid("e"),date:dt,start,end,title,memo,color,updatedAt:now(),deleted:false,origin:db.deviceLabel||db.deviceId});}
-      else{const t=byId(db.events,e.id);t.date=dt;t.start=start;t.end=end;t.title=title;t.memo=memo;t.color=color;t.updatedAt=now();}
-      save();closeModal();renderCal();
+      else{
+        const t=byId(db.events,e.id);
+        const asMove=root.querySelector("#m_asMove");
+        if(asMove&&asMove.checked&&(t.date!==dt||(t.start||"")!==start)){
+          const prev=t.date+(t.start?" "+t.start:""), next=dt+(start?" "+start:"");
+          t.movedFrom=(t.movedFrom===next)?"":prev;             // 원래 자리로 되돌리면 연기 표시 해제, 아니면 직전 일정을 기록
+        }
+        t.date=dt;t.start=start;t.end=end;t.title=title;t.memo=memo;t.color=color;t.updatedAt=now();
+      }
+      save();closeModal();renderAll();
     };
     root.querySelectorAll("#m_colors .sw").forEach(b=>b.onclick=()=>{
       root.querySelectorAll("#m_colors .sw").forEach(x=>x.classList.toggle("sel",x===b));
     });
     const doneBtn=root.querySelector("#m_done");
-    if(doneBtn)doneBtn.onclick=()=>{const t=byId(db.events,e.id);t.done=!t.done;t.updatedAt=now();save();closeModal();renderCal();};
+    if(doneBtn)doneBtn.onclick=()=>{const t=byId(db.events,e.id);t.done=!t.done;t.updatedAt=now();save();closeModal();renderAll();};
+    const cxBtn=root.querySelector("#m_cx");
+    if(cxBtn)cxBtn.onclick=()=>{
+      const t=byId(db.events,e.id);
+      if(t.cancelled){
+        t.cancelled=false;t.cancelReason="";
+        if(linked&&linked.cancelled&&confirm("연결된 회의록의 '취소된 회의' 표시도 해제할까요?")){linked.cancelled=false;linked.updatedAt=now();}
+      }else{
+        const r=prompt("취소 사유를 입력하세요 (선택, 비워도 됩니다)","");
+        if(r===null)return;                                      // 프롬프트에서 '취소'를 누르면 아무것도 안 함
+        t.cancelled=true;t.done=false;t.cancelReason=r.trim();
+        if(linked&&!linked.cancelled&&confirm("연결된 회의록도 '취소된 회의'로 표시할까요?")){linked.cancelled=true;linked.updatedAt=now();}
+      }
+      t.updatedAt=now();save();closeModal();renderAll();
+    };
+    const clr=root.querySelector("#m_clearMove");
+    if(clr)clr.onclick=()=>{const t=byId(db.events,e.id);t.movedFrom="";t.updatedAt=now();save();renderAll();openEventModal(t);};
+    const mtBtn=root.querySelector("#m_mt");
+    if(mtBtn)mtBtn.onclick=()=>{
+      if(linked){openMtModal(linked);return;}
+      const s=root.querySelector("#m_start").value, en=root.querySelector("#m_end").value;
+      openMtModal(null,{date:root.querySelector("#m_date").value,time:s?s+(en?"~"+en:""):"",topic:root.querySelector("#m_title").value.trim(),eventId:e.id});
+    };
     const del=root.querySelector("#m_del");
-    if(del)del.onclick=()=>{if(confirm("이 일정을 삭제할까요?")){const t=byId(db.events,e.id);t.deleted=true;t.updatedAt=now();save();closeModal();renderCal();}};
+    if(del)del.onclick=()=>{if(confirm("이 일정을 삭제할까요?\n\n※ 회의가 열리지 않은 경우라면 '삭제' 대신 '✕ 취소 처리'를 쓰면 기록이 취소선으로 남습니다.")){const t=byId(db.events,e.id);t.deleted=true;t.updatedAt=now();save();closeModal();renderAll();}};
     root.querySelector("#m_cancel").onclick=closeModal;
   });
 }
@@ -13057,56 +13187,150 @@ function renderMt(){
   const q=(document.getElementById("mtSearch").value||"").trim();
   // 최신이 맨 위: 일자 내림차순 → 같은 날은 시간 내림차순 → 같으면 나중에 고친 것 먼저
   let list=liveMeetings().slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.time||"").localeCompare(a.time||"")||(b.updatedAt||0)-(a.updatedAt||0));
-  if(q)list=list.filter(m=>((m.topic||"")+(m.check||"")+(m.note||"")).includes(q));
+  if(q)list=list.filter(m=>((m.topic||"")+(m.check||"")+(m.note||"")+(m.actions||[]).map(a=>a.text+" "+a.owner).join(" ")).includes(q));
   document.getElementById("mtCount").textContent="총 "+list.length+"건";
   let html="";
   if(!list.length)html="<tr><td colspan='6' class='mut' style='text-align:center;padding:24px'>회의록이 없습니다. “+ 회의 추가”를 눌러 시작하세요.</td></tr>";
   list.forEach(m=>{
-    html+="<tr data-mt='"+m.id+"'>"+
+    const ev=m.eventId?byId(db.events,m.eventId):null, evLive=ev&&!ev.deleted?ev:null;
+    html+="<tr data-mt='"+esc(m.id)+"'"+(m.cancelled?" class='cancelled'":"")+">"+
       "<td>"+esc(m.date)+"</td><td>"+esc(m.time)+"</td>"+
-      "<td>"+esc(m.topic)+"</td>"+
-      "<td class='check'>"+esc(m.check)+"</td>"+
+      "<td>"+(m.cancelled?"<span class='pill cx'>취소</span> ":"")+esc(m.topic)+
+        (evLive?" <span title='"+esc("연결된 일정: "+mdTxt(evLive.date)+" "+(evLive.start||"")+" "+evLive.title)+"'>🔗</span>":"")+"</td>"+
+      "<td class='check'>"+esc(m.check)+actSumHtml(m)+"</td>"+
       "<td>"+esc(m.note)+"</td>"+
-      "<td><button class='btn sm ghost' data-edit='"+m.id+"'>✎</button></td></tr>";
+      "<td><button class='btn sm ghost' data-edit='"+esc(m.id)+"'>✎</button></td></tr>";
   });
   const body=document.getElementById("mtBody"); body.innerHTML=html;
   body.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>openMtModal(byId(db.meetings,b.dataset.edit)));
 }
+/* 회의록 표의 액션아이템 요약 (☐ 미완료 / ☑ 완료 / 빨강 = 기한 지남) */
+function actSumHtml(m){
+  const a=m.actions||[]; if(!a.length)return "";
+  const today=ymd(new Date());
+  return "<div class='act-sum'>"+a.map(x=>"<div class='"+(x.done?"dn":(x.due&&x.due<today?"od":""))+"'>"+(x.done?"☑":"☐")+" "+esc(x.text)+
+    (x.owner||x.due?" <span class='mut'>("+esc([x.owner,x.due?"~"+mdTxt(x.due):""].filter(Boolean).join(", "))+")</span>":"")+"</div>").join("")+"</div>";
+}
 document.getElementById("mtSearch").oninput=renderMt;
 document.getElementById("addMt").onclick=()=>openMtModal(null);
 
-function openMtModal(mt){
+/* mt: 기존 회의록(수정) · prefill: 새 회의록 기본값(일정에서 '회의록 작성'으로 올 때) */
+function openMtModal(mt,prefill){
   const isNew=!mt;
-  const m=mt||{date:ymd(new Date()),time:"",topic:"",check:"",note:""};
+  const m=mt||Object.assign({date:ymd(new Date()),time:"",topic:"",check:"",note:"",eventId:"",actions:[],cancelled:false},prefill||{});
+  let acts=(m.actions||[]).map(a=>Object.assign({},a));
+  let selEv=m.eventId||"";
+  const owners=[...new Set(allActions().map(x=>x.a.owner).filter(Boolean))].sort();
   modal(`
     <h3>${isNew?"회의 추가":"회의 수정"}</h3>
     <div class="grid2">
       <label class="fld">일자<input type="date" id="m_date" value="${esc(m.date)}"></label>
       <label class="fld">시간<input id="m_time" value="${esc(m.time)}" placeholder="예: 14:00~16:00"></label>
     </div>
+    <label class="fld" style="margin-top:10px">연결된 일정 <span class="small mut" style="font-weight:400">같은 날짜의 달력 일정과 연결 (달력에 📝 표시)</span><select id="m_ev"></select></label>
     <label class="fld" style="margin-top:10px">주제<input id="m_topic" value="${esc(m.topic)}" placeholder="예: AI 심사 요구사항 정의"></label>
-    <label class="fld" style="margin-top:10px">확인 사항 / 액션아이템<textarea id="m_check" style="min-height:120px">${esc(m.check)}</textarea></label>
+    <label class="fld" style="margin-top:10px">확인 사항 / 결정 사항<textarea id="m_check" style="min-height:100px">${esc(m.check)}</textarea></label>
+    <div class="fld" style="margin-top:10px">액션아이템 <span class="small mut" style="font-weight:400">할 일 · 담당자 · 기한 (체크 = 완료)</span>
+      <div id="m_acts"></div>
+      <button type="button" class="btn sm" id="m_addAct" style="margin-top:6px;align-self:flex-start">+ 액션아이템 추가</button>
+    </div>
+    <datalist id="ownerList">${owners.map(o=>`<option value="${esc(o)}">`).join("")}</datalist>
     <label class="fld" style="margin-top:10px">비고<input id="m_note" value="${esc(m.note)}"></label>
+    <label class="checkrow" style="margin-top:10px"><input type="checkbox" id="m_cx" ${m.cancelled?"checked":""}> 취소된 회의 (목록에 취소선으로 표시, 액션아이템 모아보기에서 제외)</label>
     <div class="row" style="margin-top:14px">
       ${isNew?"":'<button class="btn danger sm" id="m_del">삭제</button>'}
       <span class="spacer"></span>
-      <button class="btn ghost" id="m_cancel">취소</button>
+      <button class="btn ghost" id="m_cancel">닫기</button>
       <button class="btn pri" id="m_save">저장</button>
     </div>
   `,(root)=>{
-    root.querySelector("#m_save").onclick=()=>{
-      const topic=root.querySelector("#m_topic").value.trim();
-      if(!topic){alert("주제를 입력하세요");return;}
-      const v=k=>root.querySelector(k).value;
-      if(isNew){db.meetings.push({id:uid("m"),date:v("#m_date"),time:v("#m_time"),topic,check:v("#m_check"),note:v("#m_note"),updatedAt:now(),deleted:false,origin:db.deviceLabel||db.deviceId});}
-      else{const t=byId(db.meetings,m.id);t.date=v("#m_date");t.time=v("#m_time");t.topic=topic;t.check=v("#m_check");t.note=v("#m_note");t.updatedAt=now();}
-      save();closeModal();renderMt();
+    const $=k=>root.querySelector(k);
+    /* 연결할 일정 목록: 선택한 날짜의 일정 (+ 이미 연결된 일정은 날짜가 달라도 표시) */
+    const fillEv=()=>{
+      const d=$("#m_date").value;
+      const list=liveEvents().filter(e=>e.date===d||e.id===selEv)
+        .sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.start||"").localeCompare(b.start||""));
+      $("#m_ev").innerHTML="<option value=''>(연결 안 함)</option>"+list.map(e=>"<option value='"+esc(e.id)+"'"+(e.id===selEv?" selected":"")+">"+
+        esc((e.date!==d?mdTxt(e.date)+" ":"")+(e.start?e.start+" ":"")+e.title+(e.cancelled?" [취소]":""))+"</option>").join("");
     };
-    const del=root.querySelector("#m_del");
-    if(del)del.onclick=()=>{if(confirm("이 회의록을 삭제할까요?")){const t=byId(db.meetings,m.id);t.deleted=true;t.updatedAt=now();save();closeModal();renderMt();}};
-    root.querySelector("#m_cancel").onclick=closeModal;
+    fillEv();
+    $("#m_date").addEventListener("change",fillEv);
+    $("#m_ev").onchange=()=>{
+      selEv=$("#m_ev").value; const e=selEv&&byId(db.events,selEv); if(!e)return;
+      if(!$("#m_topic").value.trim())$("#m_topic").value=e.title;               // 비어 있으면 일정 내용으로 채움
+      if(!$("#m_time").value.trim()&&e.start)$("#m_time").value=e.start+(e.end?"~"+e.end:"");
+    };
+    /* 액션아이템 입력줄 */
+    const renderActs=()=>{
+      const box=$("#m_acts");
+      box.innerHTML=acts.length?acts.map((a,i)=>`<div class="act-row" data-i="${i}">
+        <input type="checkbox" class="a-done" ${a.done?"checked":""} title="완료">
+        <input class="a-text" value="${esc(a.text)}" placeholder="할 일">
+        <input class="a-owner" value="${esc(a.owner)}" placeholder="담당자" list="ownerList">
+        <input type="date" class="a-due" value="${esc(a.due)}" title="기한">
+        <button type="button" class="btn sm ghost a-del" title="이 항목 삭제">✕</button></div>`).join(""):"<div class='small mut' style='margin-top:4px'>없음</div>";
+      box.querySelectorAll(".act-row").forEach(row=>{
+        const a=acts[+row.dataset.i];
+        row.querySelector(".a-done").onchange=(ev)=>{a.done=ev.target.checked;};
+        row.querySelector(".a-text").oninput=(ev)=>{a.text=ev.target.value;};
+        row.querySelector(".a-owner").oninput=(ev)=>{a.owner=ev.target.value;};
+        row.querySelector(".a-due").onchange=(ev)=>{a.due=ev.target.value;};
+        row.querySelector(".a-del").onclick=()=>{acts.splice(+row.dataset.i,1);renderActs();};
+      });
+    };
+    renderActs();
+    $("#m_addAct").onclick=()=>{acts.push({id:uid("a"),text:"",owner:"",due:"",done:false});renderActs();
+      const rows=$("#m_acts").querySelectorAll(".a-text"); rows[rows.length-1].focus();};
+    $("#m_save").onclick=()=>{
+      const topic=$("#m_topic").value.trim();
+      if(!topic){alert("주제를 입력하세요");return;}
+      const v=k=>$(k).value;
+      const actions=acts.map(a=>({id:a.id||uid("a"),text:(a.text||"").trim(),owner:(a.owner||"").trim(),due:a.due||"",done:!!a.done})).filter(a=>a.text);
+      const fields={date:v("#m_date"),time:v("#m_time"),topic,check:v("#m_check"),note:v("#m_note"),eventId:selEv,actions,cancelled:$("#m_cx").checked};
+      if(isNew){db.meetings.push(Object.assign({id:uid("m")},fields,{updatedAt:now(),deleted:false,origin:db.deviceLabel||db.deviceId}));}
+      else{Object.assign(byId(db.meetings,m.id),fields,{updatedAt:now()});}
+      save();closeModal();renderAll();
+    };
+    const del=$("#m_del");
+    if(del)del.onclick=()=>{if(confirm("이 회의록을 삭제할까요?\n\n※ 회의가 열리지 않은 경우라면 '취소된 회의'에 체크하면 기록이 취소선으로 남습니다.")){const t=byId(db.meetings,m.id);t.deleted=true;t.updatedAt=now();save();closeModal();renderAll();}};
+    $("#m_cancel").onclick=closeModal;
   });
 }
+
+/* ============================= 액션아이템(할 일) 모아보기 ============================= */
+function allActions(){
+  const out=[];
+  liveMeetings().forEach(m=>{if(m.cancelled)return;(m.actions||[]).forEach(a=>out.push({a,m}));});
+  return out;
+}
+function renderAct(){
+  const ownerSel=document.getElementById("actOwner"), f=document.getElementById("actFilter").value;
+  const all=allActions(), today=ymd(new Date());
+  const owners=[...new Set(all.map(x=>x.a.owner).filter(Boolean))].sort();
+  const curO=owners.includes(ownerSel.value)?ownerSel.value:"";
+  ownerSel.innerHTML="<option value=''>담당자 전체</option>"+owners.map(o=>"<option value='"+esc(o)+"'"+(o===curO?" selected":"")+">"+esc(o)+"</option>").join("");
+  const list=all.filter(x=>(f==="all"||(f==="open"?!x.a.done:x.a.done))&&(!curO||x.a.owner===curO))
+    .sort((p,q)=>(p.a.done-q.a.done)||((p.a.due||"9999")).localeCompare(q.a.due||"9999")||(p.m.date||"").localeCompare(q.m.date||""));
+  const open=all.filter(x=>!x.a.done), over=open.filter(x=>x.a.due&&x.a.due<today);
+  document.getElementById("actCount").innerHTML="미완료 "+open.length+"건"+(over.length?" · <span style='color:var(--bad)'>기한 지남 "+over.length+"건</span>":"");
+  document.getElementById("actList").innerHTML=list.length?"<div class='acts'>"+list.map(({a,m})=>{
+    const od=!a.done&&a.due&&a.due<today;
+    return "<div class='act-it"+(a.done?" dn":"")+(od?" overdue":"")+"'>"+
+      "<input type='checkbox' data-m='"+esc(m.id)+"' data-a='"+esc(a.id)+"'"+(a.done?" checked":"")+" title='완료'>"+
+      "<div style='flex:1;min-width:0'><div class='txt'>"+esc(a.text)+"</div><div class='meta'>"+
+        "<span>👤 "+esc(a.owner||"담당자 없음")+"</span>"+
+        "<span class='due'>📅 "+(a.due?esc(a.due)+(od?" (지남)":""):"기한 없음")+"</span>"+
+        "<span class='act-mt' data-open='"+esc(m.id)+"'>📝 "+esc(mdTxt(m.date)+" "+m.topic)+"</span>"+
+      "</div></div></div>";}).join("")+"</div>"
+    :"<div class='ag-empty'>"+(all.length?"조건에 맞는 액션아이템이 없습니다.":"액션아이템이 없습니다. 회의록에서 “+ 액션아이템 추가”로 만드세요.")+"</div>";
+  document.querySelectorAll("#actList input[type=checkbox]").forEach(b=>b.onchange=()=>{
+    const m=byId(db.meetings,b.dataset.m), a=m&&(m.actions||[]).find(x=>x.id===b.dataset.a); if(!a)return;
+    a.done=b.checked; m.updatedAt=now(); save(); renderAct(); renderMt();
+  });
+  document.querySelectorAll("#actList [data-open]").forEach(s=>s.onclick=()=>openMtModal(byId(db.meetings,s.dataset.open)));
+}
+document.getElementById("actOwner").onchange=renderAct;
+document.getElementById("actFilter").onchange=renderAct;
 
 /* ============================= 동기화: 내보내기 ============================= */
 function initSyncDefaults(){
@@ -13142,18 +13366,28 @@ function updateExpSummary(){
     (p.scope.changedOnly?" · 전송 기준시각("+fmtTs(db.lastExportAt)+") 이후 변경분":" · 범위 전체");
 }
 /* 전송용 압축 포맷: 키 이름을 없애 배열로 → QR 장수 감소 */
+/* v2: 배열 '끝'에만 필드를 추가 → 구버전 패치(v1)도 그대로 읽힘
+   일정  [.., 9:color, 10:cancelled, 11:cancelReason, 12:movedFrom]
+   회의록 [.., 7:deleted, 8:cancelled, 9:eventId, 10:actions[[id,text,owner,due,done]]] */
 function packPatch(p){
-  return {v:1,t:PREFIX,f:[p.from.id,p.from.label],g:p.generatedAt,
+  return {v:2,t:PREFIX,f:[p.from.id,p.from.label],g:p.generatedAt,
     sc:[p.scope.from||"",p.scope.to||"",p.scope.changedOnly?1:0],
-    e:(p.events||[]).map(e=>[e.id,e.date||"",e.start||"",e.end||"",e.title||"",e.memo||"",e.updatedAt||0,e.deleted?1:0,e.done?1:0,e.color||""]),
-    m:(p.meetings||[]).map(m=>[m.id,m.date||"",m.time||"",m.topic||"",m.check||"",m.note||"",m.updatedAt||0,m.deleted?1:0])};
+    e:(p.events||[]).map(e=>[e.id,e.date||"",e.start||"",e.end||"",e.title||"",e.memo||"",e.updatedAt||0,e.deleted?1:0,e.done?1:0,e.color||"",
+      e.cancelled?1:0,e.cancelReason||"",e.movedFrom||""]),
+    m:(p.meetings||[]).map(m=>[m.id,m.date||"",m.time||"",m.topic||"",m.check||"",m.note||"",m.updatedAt||0,m.deleted?1:0,
+      m.cancelled?1:0,m.eventId||"",(m.actions||[]).map(a=>[a.id||"",a.text||"",a.owner||"",a.due||"",a.done?1:0])])};
 }
 function unpackPatch(o){
-  if(o&&o.schema===1&&Array.isArray(o.events))return o; // 구버전(비압축) 호환
-  const lbl=o.f?o.f[1]:"";
-  const ev=(o.e||[]).map(a=>({id:a[0],date:a[1],start:a[2],end:a[3],title:a[4],memo:a[5],updatedAt:a[6],deleted:!!a[7],done:!!a[8],color:a[9]||"",origin:lbl}));
-  const mt=(o.m||[]).map(a=>({id:a[0],date:a[1],time:a[2],topic:a[3],check:a[4],note:a[5],updatedAt:a[6],deleted:!!a[7],origin:lbl}));
-  return {schema:1,type:PREFIX,from:{id:o.f?o.f[0]:"",label:lbl},generatedAt:o.g,
+  if(o&&o.schema===1&&Array.isArray(o.events)){o.ver=o.ver||1;return o;} // 구버전(비압축) 호환
+  const lbl=o.f?o.f[1]:"", v2=(o.v||1)>=2;
+  // 구버전 패치에는 v2 필드 키를 아예 만들지 않음 → 적용(Object.assign) 시 이 기기의 취소·연기·액션아이템 값이 지워지지 않음
+  const ev=(o.e||[]).map(a=>{const r={id:a[0],date:a[1],start:a[2],end:a[3],title:a[4],memo:a[5],updatedAt:a[6],deleted:!!a[7],done:!!a[8],color:a[9]||"",origin:lbl};
+    if(v2){r.cancelled=!!a[10];r.cancelReason=a[11]||"";r.movedFrom=a[12]||"";}return r;});
+  const mt=(o.m||[]).map(a=>{const r={id:a[0],date:a[1],time:a[2],topic:a[3],check:a[4],note:a[5],updatedAt:a[6],deleted:!!a[7],origin:lbl};
+    if(v2){r.cancelled=!!a[8];r.eventId=a[9]||"";
+      r.actions=(Array.isArray(a[10])?a[10]:[]).map(x=>({id:x[0]||uid("a"),text:x[1]||"",owner:x[2]||"",due:x[3]||"",done:!!x[4]}));}
+    return r;});
+  return {schema:1,type:PREFIX,ver:o.v||1,from:{id:o.f?o.f[0]:"",label:lbl},generatedAt:o.g,
     scope:{from:o.sc?o.sc[0]:"",to:o.sc?o.sc[1]:"",changedOnly:!!(o.sc&&o.sc[2])},events:ev,meetings:mt};
 }
 function patchToText(p){return PREFIX+"|"+LZString.compressToBase64(JSON.stringify(packPatch(p)));}
@@ -13431,8 +13665,8 @@ function diffRecord(incoming,kind){
   return{action:"upd",conflict,local};
 }
 function labelText(e,kind){
-  if(kind==="e")return (e.done?"[종료] ":"")+(e.date||"")+(e.start?" "+e.start+(e.end?"~"+e.end:""):"")+" · "+(e.title||"")+(e.memo?" ("+e.memo.slice(0,20)+")":"");
-  return (e.date||"")+" "+(e.time||"")+" · "+(e.topic||"");
+  if(kind==="e")return (e.cancelled?"[취소] ":e.done?"[종료] ":"")+(e.movedFrom?"[연기: "+e.movedFrom+"→] ":"")+(e.date||"")+(e.start?" "+e.start+(e.end?"~"+e.end:""):"")+" · "+(e.title||"")+(e.memo?" ("+e.memo.slice(0,20)+")":"");
+  return (e.cancelled?"[취소] ":"")+(e.date||"")+" "+(e.time||"")+" · "+(e.topic||"")+(e.actions&&e.actions.length?" · 액션아이템 "+e.actions.length+"건":"");
 }
 function showReview(p){
   const groups=[["e","일정",p.events||[]],["m","회의록",p.meetings||[]]];
@@ -13467,6 +13701,7 @@ function showReview(p){
   modal(`
     <h3>가져오기 미리보기</h3>
     <div class="mut small">보낸 기기: <b>${esc(p.from&&p.from.label||"?")}</b> · 생성 ${fmtTs(p.generatedAt)}</div>
+    ${(p.ver||1)<2?`<div class="imp-msg err">⚠ 구버전(v1) 앱에서 보낸 패치입니다. 취소·연기·회의록 연결·액션아이템 정보는 들어 있지 않으며, 이 기기에 있던 해당 정보는 그대로 유지됩니다. 보낸 쪽 PC도 v2 파일로 바꿔 주세요.</div>`:""}
     <div class="rev">
       <div class="hd">적용 대상 ${applicable.length}건 · 전체 ${items.length}건
         <span class="spacer"></span>
@@ -13511,12 +13746,19 @@ function download(name,content,mime){
 function csvCell(s){s=String(s==null?"":s);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
 document.getElementById("csvBtn").onclick=()=>{
   const BOM="﻿";
-  let ev=BOM+"날짜,시작,종료,제목,메모,상태,수정시각\n";
-  liveEvents().sort((a,b)=>a.date.localeCompare(b.date)||(a.start||"").localeCompare(b.start||"")).forEach(e=>{ev+=[e.date,e.start||"",e.end||"",e.title,e.memo,e.done?"종료":"진행",fmtTs(e.updatedAt)].map(csvCell).join(",")+"\n";});
+  const mtSet=meetingEventSet();
+  let ev=BOM+"날짜,시작,종료,제목,메모,상태,취소사유,원래일정(연기),회의록,수정시각\n";
+  liveEvents().sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.start||"").localeCompare(b.start||"")).forEach(e=>{ev+=[e.date,e.start||"",e.end||"",e.title,e.memo,
+    e.cancelled?"취소":e.done?"종료":"진행",e.cancelReason||"",e.movedFrom||"",mtSet.has(e.id)?"있음":"",fmtTs(e.updatedAt)].map(csvCell).join(",")+"\n";});
   download("일정_"+tsName()+".csv",ev,"text/csv");
-  let mt=BOM+"일자,시간,주제,확인사항,비고,수정시각\n";
-  liveMeetings().sort((a,b)=>a.date.localeCompare(b.date)).forEach(m=>{mt+=[m.date,m.time,m.topic,m.check,m.note,fmtTs(m.updatedAt)].map(csvCell).join(",")+"\n";});
+  const actTxt=(m)=>(m.actions||[]).map(a=>(a.done?"☑ ":"☐ ")+a.text+(a.owner||a.due?" ("+[a.owner,a.due].filter(Boolean).join(", ")+")":"")).join("\n");
+  let mt=BOM+"일자,시간,주제,확인사항,액션아이템,비고,상태,연결일정,수정시각\n";
+  liveMeetings().sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(m=>{const e=m.eventId&&byId(db.events,m.eventId);
+    mt+=[m.date,m.time,m.topic,m.check,actTxt(m),m.note,m.cancelled?"취소":"",e&&!e.deleted?e.date+" "+(e.start||"")+" "+e.title:"",fmtTs(m.updatedAt)].map(csvCell).join(",")+"\n";});
   setTimeout(()=>download("회의록_"+tsName()+".csv",mt,"text/csv"),400);
+  let ac=BOM+"회의일자,회의주제,할일,담당자,기한,상태\n";
+  liveMeetings().forEach(m=>(m.actions||[]).forEach(a=>{ac+=[m.date,m.topic,a.text,a.owner,a.due,a.done?"완료":m.cancelled?"(취소된 회의)":"미완료"].map(csvCell).join(",")+"\n";}));
+  setTimeout(()=>download("액션아이템_"+tsName()+".csv",ac,"text/csv"),800);
 };
 document.getElementById("backupBtn").onclick=()=>download("psync-backup-"+tsName()+".json",JSON.stringify(db),"application/json");
 document.getElementById("restoreBtn").onclick=()=>document.getElementById("restoreFile").click();
@@ -13567,8 +13809,10 @@ function refreshBadges(){
   b.className="badge "+(db.deviceLabel==="내부"?"int":db.deviceLabel==="외부"?"ext":"");
   document.getElementById("syncInfo").textContent="마지막 동기화: "+fmtTs(db.lastSyncAt);
   document.getElementById("footStat").textContent="일정 "+liveEvents().length+" · 회의록 "+liveMeetings().length;
+  const openN=allActions().filter(x=>!x.a.done).length;
+  document.querySelector(".tabs button[data-tab=act]").textContent="✅ 할 일"+(openN?" "+openN:"");
 }
-function renderAll(){renderCal();renderMt();refreshBadges();initSettings();updateExpSummary&&updateExpSummary();}
+function renderAll(){renderCal();renderMt();renderAct();refreshBadges();initSettings();updateExpSummary&&updateExpSummary();}
 
 /* ============================= 초기화 ============================= */
 (function init(){
@@ -13583,7 +13827,7 @@ function renderAll(){renderCal();renderMt();refreshBadges();initSettings();updat
       </div>
     `,(root)=>{root.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{db.deviceLabel=b.dataset.pick;save();closeModal();renderAll();});}),300);
   }
-  renderCal();renderMt();refreshBadges();initSettings();renderThemeList();
+  renderCal();renderMt();renderAct();refreshBadges();initSettings();renderThemeList();
 })();
 </script>
 </body>

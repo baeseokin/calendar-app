@@ -8,10 +8,10 @@
 npm install                                  # 처음 한 번
 npx playwright install chromium webkit       # 브라우저가 없으면 한 번
 
-npm run test:e2e          # 전체 실행: PC · 태블릿 · iPhone · Android = 124개 (약 30초)
-npm run test:e2e:pc       # PC 만      (공통 27 + PC 전용 4)
-npm run test:e2e:tablet   # 태블릿만   (공통 27 + 태블릿 전용 4)
-npm run test:e2e:mobile   # 모바일만   (iPhone·Android 각각 공통 27 + 모바일 전용 4)
+npm run test:e2e          # 전체 실행: PC · 태블릿 · iPhone · Android = 144개 (약 31초)
+npm run test:e2e:pc       # PC 만      (공통 32 + PC 전용 4)
+npm run test:e2e:tablet   # 태블릿만   (공통 32 + 태블릿 전용 4)
+npm run test:e2e:mobile   # 모바일만   (iPhone·Android 각각 공통 32 + 모바일 전용 4)
 npm run test:e2e:shots    # 단계별 스크린샷 갤러리 열기 (e2e-screenshots/index.html)
 npm run test:e2e:report   # Playwright 보고서 열기 (http://localhost:9324, 이미 떠 있으면 브라우저만 다시 엶)
 
@@ -74,7 +74,7 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
 | `swipe(page, dx, dy, { pointerType, duration, at, click })` | 달력을 손가락(또는 마우스)으로 끌기 — Pointer Events 를 직접 보냄 |
 | `readDb(page)` | 앱이 localStorage 에 저장한 데이터 |
 | `expectBarColor(칩, [색])` | 일정 막대가 그 색(생략하면 디자인 대표색)의 반투명 채움인지 확인 |
-| `expectDialog(dialogs, 문구)`, `answerConfirm(false)` | 알림창 문구 확인, confirm 에 '취소' 누르기 |
+| `expectDialog(dialogs, 문구)`, `answerConfirm(false)`, `answerPrompt(글자)` | 알림창 문구 확인, confirm 에 '취소' 누르기, prompt 입력창에 글자 넣기 |
 | `download(page, 버튼)` | 다운로드 파일 경로·이름·내용 |
 
 ## 케이스 목록
@@ -84,7 +84,7 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
 | 1-1 | calendar | 처음 열면 기기 지정 창 → 선택하면 상단 표시, 새로고침해도 다시 묻지 않음 |
 | 1-2 | calendar | 날짜 칸 클릭 → 일정 추가 → 달력 표시, 새로고침 후 유지 |
 | 1-3 | calendar | 제목 없음 · 종료 시간 < 시작 시간이면 저장 안 됨 |
-| 1-4 | calendar | 일정 수정(제목·날짜 이동)·삭제 (저장소에는 삭제 표시로 남음) |
+| 1-4 | calendar | 일정 수정(제목·날짜 이동 → 원래 자리 연기 흔적)·삭제 (흔적도 함께 사라짐, 저장소에는 삭제 표시로 남음) |
 | 1-5 | calendar | 이전 달·다음 달·오늘 이동 |
 | 1-6 | calendar | 달력이 브라우저 화면을 가로·세로로 채움 `@pc @tablet` |
 | 1-7 | calendar | 칸에 들어가는 만큼 표시 + 넘치는 개수만 +N, 화면 크기 변경 시 다시 계산 `@pc @tablet` |
@@ -102,9 +102,10 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
 | 4-4 | sync-qr | QR 없는 사진 / 이 앱이 아닌 QR / 다른 내보내기의 QR 을 사진별로 구분, 처음부터 다시 고르면 초기화 |
 | 4-5 | sync-qr | QR 내보내기 '한 장씩 크게'(기본): 이전·다음 버튼, ← → 키, '전체 보기' 전환, QR 위 마우스 커서 숨김 |
 | 4-6 | sync-qr | 화면 사진에 위·아래 이웃 QR 이 걸쳐 찍혀(사진 전체로는 인식 불가) 도 영역별 재탐색으로 가운데 QR 을 읽음 |
+| 4-7 | sync | v2 정보(취소·연기·회의록 연결·액션아이템) 전달, 구버전(v1) 패치는 경고 + 이 기기의 v2 정보 유지 |
 | 5-1 | settings | 전체 백업 → 전체 삭제 → 백업 복원 |
 | 5-2 | settings | 잘못된 파일로는 복원 안 됨 |
-| 5-3 | settings | CSV 내보내기 (BOM, 상태 열, 쉼표·따옴표·줄바꿈 처리) |
+| 5-3 | settings | CSV 내보내기 3개: 일정(BOM, 상태·취소사유·연기·회의록 열)·회의록(액션아이템·상태·연결일정)·액션아이템 |
 | 5-4 | settings | 기기 이름 직접 입력, 새로고침 후 유지 |
 | 6-1 | design | 설정 탭에서 디자인 선택 → 바로 적용·선택 표시, 새로고침 후 유지, 일정 데이터에는 저장 안 됨 |
 | 6-2 | design | 디자인은 설정 탭에서만 변경 (달력 탭에 디자인 버튼 없음), 바꾼 디자인이 달력에 반영 |
@@ -117,6 +118,10 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
 | 7-5 | responsive | 모바일: 회의록 카드(수정 버튼 오른쪽 위), 검색칸 전체 폭 `@mobile` |
 | 7-6 | responsive | 터치로 달력을 좌우로 밀면 다음·이전 달 (빠른 튕김 30px~, 보통 50px~), 짧거나 세로로 끈 것은 무시, 밀고 뗀 직후 클릭 무시 `@mobile @tablet` |
 | 7-7 | responsive | PC: 마우스 끌기는 달 이동으로 처리하지 않음 `@pc` |
+| 8-1 | v2 | 일정 취소: 사유 입력 → 취소선, '종료 처리' 숨김, '지난 일정 종료'에서 제외, 취소 해제 |
+| 8-2 | v2 | 일정 연기: 날짜·시간 변경 시 원래 자리 흔적, '연기 표시 지우기', 체크 끄면 흔적 없음, 원래 자리로 되돌리면 해제 |
+| 8-3 | v2 | 일정 → '회의록 작성'(일자·시간·주제·연결 채움), 달력 📝·회의록 🔗, 일정에서 회의록 열기, 연결 해제 |
+| 8-4 | v2 | 액션아이템: '할 일' 탭 모아보기(미완료·기한 지남·탭 숫자), 담당자 필터, 완료 체크, 회의록 요약, 회의록에서 추가, 취소된 회의 제외 |
 
 ## 다루지 않는 것
 - QR 사진 가져오기는 4-3·4-4·4-6 에서 앱이 만든 QR 이미지를 그대로 파일로 저장(또는 합성)해 검증합니다. 실제 촬영 사진의 반사·흔들림·기울기는 다루지 않습니다.
