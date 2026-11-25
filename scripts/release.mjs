@@ -168,4 +168,4 @@ ${sums}
    git push origin ${branch} --follow-tags
    gh release create v${ver} "${out}/${APP}" ${MANUALS.map((m) => `"${out}/${m}"`).join(" ")} "${out}/SHA256SUMS.txt" --title "v${ver}" --notes-file "${out}/RELEASE_NOTES.md"
 사내 반입: SHA256SUMS.txt 의 해시값을 보안 검토 요청서에 함께 적으세요.
-사용자 PC: 기존 파일을 먼저 백업(설정 → 전체 백업)한 뒤, 같은 이름(${APP})으로 덮어쓰세요.`);
+사용자 PC: 기존 파일을 먼저 백업(동기화·설정 탭 → 전체 백업)한 뒤, 같은 이름(${APP})으로 덮어쓰세요.`);
