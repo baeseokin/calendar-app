@@ -19,11 +19,11 @@
 `main` 브랜치에서 진행합니다 (태그가 `main` 기록에 남아야 나중에 "어떤 코드가 배포됐는지" 찾을 수 있음).
 
 ```bash
-npm run release -- minor          # 1) 준비: APP_VER·package.json 올림 + CHANGELOG.md 초안
+npm run release -- minor          # 1) 준비: APP_VER·package.json 올림 + CHANGELOG.md 초안 + 매뉴얼 PDF 다시 만듦
 #    → CHANGELOG.md 의 새 항목을 사용자가 읽을 문장으로 다듬고 '(초안: …)' 표시를 지움
 npm run release -- minor          # 2) 마무리: E2E 전체 → 커밋 "release: vX.Y.Z" → 태그 → dist/vX.Y.Z/
 git push origin main --follow-tags
-gh release create vX.Y.Z dist/vX.Y.Z/project-calendar-app.html dist/vX.Y.Z/사용자매뉴얼.html \
+gh release create vX.Y.Z dist/vX.Y.Z/project-calendar-app.html dist/vX.Y.Z/사용자매뉴얼_PC.pdf dist/vX.Y.Z/사용자매뉴얼_모바일.pdf \
   dist/vX.Y.Z/SHA256SUMS.txt --title vX.Y.Z --notes-file dist/vX.Y.Z/RELEASE_NOTES.md
 ```
 
@@ -36,7 +36,7 @@ gh release create vX.Y.Z dist/vX.Y.Z/project-calendar-app.html dist/vX.Y.Z/사�
 | 파일 | 용도 |
 |---|---|
 | `project-calendar-app.html` | 앱. 사용자 PC 에는 **항상 이 이름**으로 덮어씁니다 |
-| `사용자매뉴얼.html` | 사용자 매뉴얼 |
+| `사용자매뉴얼_PC.pdf` · `사용자매뉴얼_모바일.pdf` | 사용자 매뉴얼 (화면 캡처 포함, 준비 단계에서 새 버전으로 다시 만듦) |
 | `RELEASE_NOTES.md` | CHANGELOG 의 이번 버전 항목 |
 | `SHA256SUMS.txt` | 파일 해시. 사내 보안 반입 때 검토받은 파일과 같은지 확인하는 데 씁니다 |
 
@@ -44,7 +44,7 @@ gh release create vX.Y.Z dist/vX.Y.Z/project-calendar-app.html dist/vX.Y.Z/사�
 
 1. E2E 전체 통과 (스크립트가 확인)
 2. `CHANGELOG.md` — 바뀐 점, **두 PC 모두 교체 필요 여부**
-3. `사용자매뉴얼.html` — 새 기능·바뀐 화면 반영
+3. 사용자 매뉴얼 — 새 기능·바뀐 화면을 `docs/manual/manual.src.html` 과 캡처 스크립트에 반영 (`user-manual` 스킬, `npm run manual`)
 4. 릴리스 태그·GitHub Release (앱·매뉴얼·해시)
 5. 사내 반입: 보안 검토 요청에 `SHA256SUMS.txt` 의 해시값 첨부
 6. 사용자 PC 교체: **설정 → 전체 백업** 먼저, 같은 폴더·같은 이름으로 덮어쓰기, 화면 아래 버전 확인

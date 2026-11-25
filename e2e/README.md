@@ -8,10 +8,10 @@
 npm install                                  # 처음 한 번
 npx playwright install chromium webkit       # 브라우저가 없으면 한 번
 
-npm run test:e2e          # 전체 실행: PC · 태블릿 · iPhone · Android = 148개 (약 31초)
-npm run test:e2e:pc       # PC 만      (공통 33 + PC 전용 4)
-npm run test:e2e:tablet   # 태블릿만   (공통 33 + 태블릿 전용 4)
-npm run test:e2e:mobile   # 모바일만   (iPhone·Android 각각 공통 33 + 모바일 전용 4)
+npm run test:e2e          # 전체 실행: PC · 태블릿 · iPhone · Android = 168개 (약 35초)
+npm run test:e2e:pc       # PC 만      (공통 38 + PC 전용 4)
+npm run test:e2e:tablet   # 태블릿만   (공통 38 + 태블릿 전용 4)
+npm run test:e2e:mobile   # 모바일만   (iPhone·Android 각각 공통 38 + 모바일 전용 4)
 npm run test:e2e:shots    # 단계별 스크린샷 갤러리 열기 (e2e-screenshots/index.html)
 npm run test:e2e:report   # Playwright 보고서 열기 (http://localhost:9324, 이미 떠 있으면 브라우저만 다시 엶)
 
@@ -55,7 +55,7 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
   (`.claude/skills/e2e/SKILL.md`)에 따라 실행 → 실패 원인 분석·수정 → 재실행(최대 3회) 후 커밋합니다.
   새 기능에 맞는 케이스가 없으면 커밋 전에 케이스 초안을 제안합니다.
 - 이미 같은 내용으로 통과했으면 다시 실행하지 않습니다 (스테이징 트리 해시로 비교).
-- 선택 규칙: 앱 HTML·`playwright.config.js`·`package*.json`·`e2e/support` 등 변경 → 전체, spec 만 바뀜 → 그 spec, 문서·`gen_test_data.py`·`test-data.json`·`pds-diary.html`(별도 앱, E2E 없음)·`사용자매뉴얼.html`·`scripts/release.mjs` → 생략.
+- 선택 규칙: 앱 HTML·`playwright.config.js`·`package*.json`·`e2e/support` 등 변경 → 전체, spec 만 바뀜 → 그 spec, 문서·`gen_test_data.py`·`test-data.json`·`pds-diary.html`(별도 앱, E2E 없음)·사용자 매뉴얼(`docs/`, `사용자매뉴얼_*.pdf`, `scripts/manual/`)·`scripts/release.mjs` → 생략.
   (앱이 HTML 한 파일이라 화면별로 나눠 고를 수 없어 앱이 바뀌면 항상 전체를 실행합니다)
 - 화면 E2E 가 끝나면 결과 보고서가 자동으로 브라우저에 열립니다 (http://localhost:9324). 열지 않으려면 `E2E_NO_REPORT=1`.
 - 테스트는 작업 폴더 기준으로 돌기 때문에, 스테이징되지 않은 앱·테스트 변경이 있으면 실행을 거부합니다 (`git add` 후 다시).
@@ -103,9 +103,10 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
 | 4-5 | sync-qr | QR 내보내기 '한 장씩 크게'(기본): 이전·다음 버튼, ← → 키, '전체 보기' 전환, QR 위 마우스 커서 숨김 |
 | 4-6 | sync-qr | 화면 사진에 위·아래 이웃 QR 이 걸쳐 찍혀(사진 전체로는 인식 불가) 도 영역별 재탐색으로 가운데 QR 을 읽음 |
 | 4-7 | sync | v2 정보(취소·연기·회의록 연결·액션아이템) 전달, 구버전(v1) 패치는 경고 + 이 기기의 v2 정보 유지 |
+| 4-8 | sync | v2.1 정보(여러 날·반복 묶음) 전달, v2.0 앱이 보낸 패치는 종료일·반복 정보를 지우지 않음 |
 | 5-1 | settings | 전체 백업 → 전체 삭제 → 백업 복원 |
 | 5-2 | settings | 잘못된 파일로는 복원 안 됨 |
-| 5-3 | settings | CSV 내보내기 3개: 일정(BOM, 상태·취소사유·연기·회의록 열)·회의록(액션아이템·상태·연결일정)·액션아이템 |
+| 5-3 | settings | CSV 내보내기 3개: 일정(BOM, 종료일·상태·반복·취소사유·연기·회의록 열)·회의록(액션아이템·상태·연결일정)·액션아이템 |
 | 5-4 | settings | 기기 이름 직접 입력, 새로고침 후 유지 |
 | 5-5 | settings | 앱 버전이 제목·화면 아래·설정 탭에 같은 값으로 표시되고 package.json 버전과 같음 (버전 표기 한 곳 유지) |
 | 6-1 | design | 설정 탭에서 디자인 선택 → 바로 적용·선택 표시, 새로고침 후 유지, 일정 데이터에는 저장 안 됨 |
@@ -123,6 +124,10 @@ e2e/run-related.sh --check    # 지금 스테이징된 내용이 이미 통과�
 | 8-2 | v2 | 일정 연기: 날짜·시간 변경 시 원래 자리 흔적, '연기 표시 지우기', 체크 끄면 흔적 없음, 원래 자리로 되돌리면 해제 |
 | 8-3 | v2 | 일정 → '회의록 작성'(일자·시간·주제·연결 채움), 달력 📝·회의록 🔗, 일정에서 회의록 열기, 연결 해제 |
 | 8-4 | v2 | 액션아이템: '할 일' 탭 모아보기(미완료·기한 지남·탭 숫자), 담당자 필터, 완료 체크, 회의록 요약, 회의록에서 추가, 취소된 회의 제외 |
+| 9-1 | recurring | 여러 날 일정: 시작일~종료일, 걸친 날마다 표시(▸ · ↳ · ~종료 시간), 모바일 목록 기간·n일째, 시작일 이동 시 기간 유지, 종료일 < 시작일 막음 |
+| 9-2 | recurring | 매주 여러 요일(화·목) 반복: 종류 버튼·요일 선택(시작일 요일 기본)·반복 종료일·미리보기, 회차별 일정 생성(같은 묶음), 🔁 표시, 회차 정보 |
+| 9-3 | recurring | 반복 규칙: 평일 버튼·2주마다·매월 일자(없는 달 건너뜀)·매월 n째 주 요일, 요일 미선택·366회 초과 막음 |
+| 9-4 | recurring | 반복 일정 수정·삭제 범위: '이 일정만' / '이 일정과 이후 모두' |
 
 ## 다루지 않는 것
 - QR 사진 가져오기는 4-3·4-4·4-6 에서 앱이 만든 QR 이미지를 그대로 파일로 저장(또는 합성)해 검증합니다. 실제 촬영 사진의 반사·흔들림·기울기는 다루지 않습니다.

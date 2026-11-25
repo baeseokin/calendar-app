@@ -24,7 +24,8 @@ const IGNORE_PATTERNS = [
   /^e2e\/(select-specs\.mjs|run-related\.sh|open-report\.sh)$/,
   /^(\.gitignore|gen_test_data\.py|test-data\.json)$/,
   /^pds-diary\.html$/, // 별도 앱(PDS 다이어리) — E2E 대상 아님
-  /^(사용자매뉴얼\.html|scripts\/release\.mjs)$/, // 사용자 문서 · 배포 스크립트
+  /^(사용자매뉴얼_(PC|모바일)\.pdf|scripts\/release\.mjs)$/, // 사용자 매뉴얼 · 배포 스크립트
+  /^scripts\/manual\//, // 매뉴얼 캡처·생성 스크립트 (docs/ 의 매뉴얼 원본은 위 docs 규칙으로 제외)
   /(^|\/)\.DS_Store$/,
 ];
 

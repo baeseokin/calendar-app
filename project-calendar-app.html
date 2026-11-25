@@ -57,6 +57,14 @@
   .dnum.sun{color:var(--sun)} .dnum.sat{color:var(--sat)}
   .evs{position:absolute;left:4px;right:4px;top:22px;bottom:4px;overflow:hidden}
   .ev.done{opacity:.45;text-decoration:line-through}
+  .ev.cont{opacity:.85;font-style:italic}
+  /* 반복 입력 (종류 버튼 · 요일 버튼) */
+  .seg{display:flex;gap:4px;flex-wrap:wrap}
+  .seg button,.days button{flex:1;border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:var(--rsm);font-weight:700;font-size:13px;padding:7px 4px;min-width:44px}
+  .seg button.sel,.days button.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+  .days{display:flex;gap:4px;margin-top:4px}
+  .days button{min-width:0;padding:7px 0}
+  .rep-panel{border:1px solid var(--line);border-radius:var(--rsm);padding:10px;margin-top:8px;display:flex;flex-direction:column;gap:8px}
   .evs .more{font-size:11.5px;line-height:1.25;color:var(--mut)}
   .ev{font-size:11px;line-height:1.25;--ev-a:var(--ev-fill);background:color-mix(in srgb,var(--c,var(--accent)) var(--ev-a),transparent);border-radius:var(--rev);padding:2px 6px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   table.mt{width:100%;border-collapse:collapse}
@@ -12856,6 +12864,83 @@ const fmtTs=(ms)=>{if(!ms)return"없음";const d=new Date(ms);return d.getFullYe
 // v2: 작은따옴표도 이스케이프 (속성을 '...'로 감싸는 곳이 많아, 빠지면 제목의 ' 때문에 HTML이 깨지거나 스크립트가 끼어들 수 있음)
 const esc=(s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const mdTxt=(ds)=>{const p=String(ds||"").split("-");return p.length===3?(+p[1])+"/"+(+p[2]):String(ds||"");};
+/* ---------- 여러 날 일정 · 반복 일정 ----------
+   여러 날: endDate(마지막 날, 없으면 하루). 시작 시간은 첫날, 종료 시간은 마지막 날.
+   반복: 저장할 때 회차마다 일정을 따로 만든다(회차별로 종료·취소·연기·회의록 연결 가능).
+         같은 반복 묶음은 seriesId 로 묶고, repeat="규칙:반복종료일" (예: "weekly:2027-02-23") 을 함께 적어 둔다. */
+const MAX_SPAN=92, MAX_REPEAT=366;
+const validDate=(s)=>/^\d{4}-\d{2}-\d{2}$/.test(s||"");
+const addDaysStr=(ds,n)=>{const [y,m,d]=ds.split("-").map(Number);return ymd(new Date(y,m-1,d+n));};
+const daysBetween=(a,b)=>{const p=(s)=>{const [y,m,d]=s.split("-").map(Number);return Date.UTC(y,m-1,d);};return Math.round((p(b)-p(a))/864e5);};
+/* 일정의 마지막 날 (여러 날이 아니거나 값이 이상하면 시작일) */
+function evEnd(e){return validDate(e.endDate)&&e.endDate>e.date&&daysBetween(e.date,e.endDate)<=MAX_SPAN?e.endDate:e.date;}
+/* 반복 규칙 (room-reservation 의 반복 예약 방식과 같음: 시작일부터 반복 종료일까지 하루씩 보며 조건에 맞는 날을 회차로)
+   저장 형식 repeat = "<규칙>:<반복 종료일>"
+     daily:YYYY-MM-DD                 매일
+     weekly:135:…  / weekly:135/2:…   매주(또는 2주마다) 고른 요일 (0=일 … 6=토)
+     monthly:D18:… / monthly:N3-3:…   매월 18일 / 매월 3째 주 수요일
+     yearly:1118:…                    매년 11월 18일
+   (개발 중 잠시 쓰던 "weekly:YYYY-MM-DD" 처럼 규칙 칸이 없는 값도 읽음: 시작일의 요일·날짜 기준) */
+const DOWS="일월화수목금토";
+function parseRepeat(s){
+  const p=String(s||"").split(":");
+  const until=p[p.length-1], freq=p[0], arg=p.length===3?p[1]:"";
+  if(!validDate(until)||p.length<2||p.length>3)return null;
+  if(freq==="daily")return {freq,until};
+  if(freq==="weekly"||freq==="weekday"||freq==="biweekly"){
+    const m=/^([0-6]{1,7})(?:\/([12]))?$/.exec(arg);
+    if(arg&&!m)return null;
+    const days=freq==="weekday"?[1,2,3,4,5]:m?[...new Set(m[1].split("").map(Number))].sort():null;
+    return {freq:"weekly",days,every:freq==="biweekly"?2:m&&m[2]?+m[2]:1,until};
+  }
+  if(freq==="monthly"){
+    if(!arg)return {freq,mday:null,until};
+    let m=/^D([1-9]|[12]\d|3[01])$/.exec(arg); if(m)return {freq,mday:+m[1],until};
+    m=/^N([1-5])-([0-6])$/.exec(arg); if(m)return {freq,nth:+m[1],ndow:+m[2],until};
+    return null;
+  }
+  if(freq==="yearly"){
+    if(arg&&!/^(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/.test(arg))return null;
+    return {freq,mmdd:arg||null,until};
+  }
+  return null;
+}
+function encodeRepeat(r){
+  const arg=r.freq==="weekly"?r.days.join("")+(r.every===2?"/2":""):r.freq==="monthly"?(r.nth?"N"+r.nth+"-"+r.ndow:"D"+r.mday):r.freq==="yearly"?r.mmdd:"";
+  return r.freq+(arg?":"+arg:"")+":"+r.until;
+}
+/* "매주 월·수·금" / "2주마다 화" / "매월 18일" / "매월 3째 주 수요일" / "매년 11월 18일" / "매일" */
+function describeRepeat(r){
+  if(!r)return "반복";
+  if(r.freq==="daily")return "매일";
+  if(r.freq==="weekly"){
+    const d=r.days?(r.days.join("")==="12345"?"평일(월~금)":r.days.map(i=>DOWS[i]).join("·")):"";
+    return (r.every===2?"2주마다":"매주")+(d?" "+d:"");
+  }
+  if(r.freq==="monthly")return r.nth?"매월 "+r.nth+"째 주 "+DOWS[r.ndow]+"요일":"매월"+(r.mday?" "+r.mday+"일":"");
+  if(r.freq==="yearly")return "매년"+(r.mmdd?" "+(+r.mmdd.slice(0,2))+"월 "+(+r.mmdd.slice(2))+"일":"");
+  return "반복";
+}
+/* 반복 회차 날짜들: 시작일부터 반복 종료일까지 하루씩 보며 규칙에 맞는 날 (최대 MAX_REPEAT+1 개 — 넘치면 호출한 쪽에서 막음) */
+function repeatDates(start,rule){
+  const out=[];
+  if(!rule||!validDate(start)||rule.until<start)return out;
+  const [y0,m0,d0]=start.split("-").map(Number), dow0=new Date(y0,m0-1,d0).getDay();
+  const weekOf=(ds)=>Math.floor((daysBetween(start,ds)+dow0)/7);    // 시작일이 있는 주(일~토)를 0주차로
+  for(let i=0;i<=3700&&out.length<=MAX_REPEAT;i++){
+    const ds=addDaysStr(start,i); if(ds>rule.until)break;
+    const [y,m,d]=ds.split("-").map(Number), w=new Date(y,m-1,d).getDay();
+    let ok=false;
+    if(rule.freq==="daily")ok=true;
+    else if(rule.freq==="weekly")ok=(rule.days||[dow0]).includes(w)&&(rule.every!==2||weekOf(ds)%2===0);
+    else if(rule.freq==="monthly")ok=rule.nth?Math.ceil(d/7)===rule.nth&&w===rule.ndow:d===(rule.mday||d0);
+    else if(rule.freq==="yearly")ok=pad(m)+pad(d)===(rule.mmdd||pad(m0)+pad(d0));
+    if(ok)out.push(ds);
+  }
+  return out;
+}
+const fmtDot=(ds)=>ds?ds.replace(/-/g,"."):"";
+
 /* 연기 기록: "YYYY-MM-DD" 또는 "YYYY-MM-DD HH:MM" */
 function parseMoved(s){if(!s)return null;const [date,start]=String(s).split(" ");return /^\d{4}-\d{2}-\d{2}$/.test(date)?{date,start:start||""}:null;}
 const fmtMoved=(mf)=>mdTxt(mf.date)+(mf.start?" "+mf.start:"");
@@ -12920,12 +13005,18 @@ function renderCal(){
           html+="<div class='ev moved' data-ev='"+esc(r.id)+"' title='"+esc("[연기됨 → "+mdTxt(r.date)+(r.start?" "+r.start:"")+"] "+r.title)+"'>"+(e.start?"<b>"+esc(e.start)+"</b> ":"")+esc(r.title)+" → "+esc(mdTxt(r.date))+"</div>";
           return;
         }
-        const tl=(e.start?e.start+(e.end?"~"+e.end:"")+" ":"")+e.title+(e.memo?" — "+e.memo:"")+(e.cancelled&&e.cancelReason?" (취소 사유: "+e.cancelReason+")":"");
+        if(e.cont){ // 여러 날 일정의 이어지는 날: "↳ 제목", 마지막 날은 끝나는 시간
+          const r=e.ref, cls=r.cancelled?" cancelled":r.done?" done":"";
+          html+="<div class='ev cont"+cls+"' data-ev='"+esc(r.id)+"'"+(evColor(r.color)?" style='--c:"+r.color+"'":"")+" title='"+esc(fmtRange(r)+" "+r.title)+"'>↳ "+esc(r.title)+(e.last&&r.end?" <b>~"+esc(r.end)+"</b>":"")+"</div>";
+          return;
+        }
+        const multi=evEnd(e)!==e.date;
+        const tl=(multi?fmtRange(e)+" ":e.start?e.start+(e.end?"~"+e.end:"")+" ":"")+e.title+(e.memo?" — "+e.memo:"")+(e.cancelled&&e.cancelReason?" (취소 사유: "+e.cancelReason+")":"")+(e.seriesId?" ["+repeatText(e)+"]":"");
         const tag=e.cancelled?"[취소] ":e.done?"[종료] ":"";
         const tp=e.start?"<b>"+esc(e.start)+"</b> ":"";
         const cls=e.cancelled?" cancelled":e.done?" done":"";
         html+="<div class='ev"+cls+"' data-ev='"+esc(e.id)+"'"+(evColor(e.color)?" style='--c:"+e.color+"'":"")+" title='"+esc(tag+(e.movedFrom?"[연기] ":"")+tl)+"'>"+
-          (e.cancelled?"✕ ":e.done?"✔ ":"")+(e.movedFrom?"↪ ":"")+tp+esc(e.title)+(mtSet.has(e.id)?" 📝":"")+"</div>";
+          (e.cancelled?"✕ ":e.done?"✔ ":"")+(e.movedFrom?"↪ ":"")+tp+esc(e.title)+(multi?" ▸":"")+(e.seriesId?" 🔁":"")+(mtSet.has(e.id)?" 📝":"")+"</div>";
       });
       html+="<div class='more hidden'></div></div>";
       html+="</td>";
@@ -12957,10 +13048,20 @@ const mobileMq=window.matchMedia("(max-width:640px)");
 function isMobileUi(){return mobileMq.matches;}
 function markSel(){document.querySelectorAll("#calBody td").forEach(td=>td.classList.toggle("sel",td.dataset.date===selDate));}
 /* 날짜별 일정 목록 (연기된 일정은 원래 날짜에도 'ghost' 항목으로 넣음) */
+/* "11/24 14:00 ~ 11/26 18:00" (여러 날) 또는 "14:00~15:00" / "종일" */
+function fmtRange(e){
+  const last=evEnd(e);
+  if(last===e.date)return e.start?e.start+(e.end?"~"+e.end:""):"종일";
+  return mdTxt(e.date)+(e.start?" "+e.start:"")+" ~ "+mdTxt(last)+(e.end?" "+e.end:"");
+}
+/* "매주 · ~2027.02.23" */
+function repeatText(e){const r=parseRepeat(e.repeat);return r?describeRepeat(r)+" · ~"+fmtDot(r.until):"반복";}
 function buildDayMap(){
   const map={}, put=(ds,x)=>(map[ds]=map[ds]||[]).push(x);
   liveEvents().forEach(e=>{
     put(e.date,e);
+    const last=evEnd(e), n=daysBetween(e.date,last);
+    for(let i=1;i<=n;i++)put(addDaysStr(e.date,i),{cont:true,ref:e,date:addDaysStr(e.date,i),start:"",title:e.title,last:i===n}); // 이어지는 날
     const mf=parseMoved(e.movedFrom);
     if(mf&&mf.date!==e.date)put(mf.date,{ghost:true,ref:e,date:mf.date,start:mf.start,title:e.title});
   });
@@ -12974,11 +13075,13 @@ function renderAgenda(){
   document.getElementById("agTitle").textContent=m+"월 "+d+"일 ("+dow+")";
   const list=buildDayMap()[selDate]||[], mtSet=meetingEventSet();
   document.getElementById("agList").innerHTML=list.length?list.map(e=>{
-    const r=e.ghost?e.ref:e, mf=parseMoved(r.movedFrom);
+    const r=e.ghost||e.cont?e.ref:e, mf=parseMoved(r.movedFrom), multi=evEnd(r)!==r.date;
     const cls=e.ghost?" moved":r.cancelled?" cancelled":r.done?" done":"";
-    const time=e.ghost?(e.start||"종일"):(r.start?r.start+(r.end?"~"+r.end:""):"종일");
+    const time=e.ghost?(e.start||"종일"):multi?fmtRange(r):(r.start?r.start+(r.end?"~"+r.end:""):"종일");
     const pills=(e.ghost?" <span class='pill mv'>→ "+esc(mdTxt(r.date))+" 연기</span>":"")+
       (!e.ghost&&mf?" <span class='pill mv'>"+esc(fmtMoved(mf))+"에서 연기</span>":"")+
+      (multi&&!e.ghost?" <span class='pill'>"+(daysBetween(r.date,e.date)+1)+"/"+(daysBetween(r.date,evEnd(r))+1)+"일째</span>":"")+
+      (r.seriesId&&!e.ghost?" <span class='pill'>🔁 "+esc(repeatText(r))+"</span>":"")+
       (r.cancelled?" <span class='pill cx'>취소</span>":"")+(mtSet.has(r.id)?" 📝":"");
     const memo=(r.cancelled&&r.cancelReason?"취소 사유: "+r.cancelReason+(r.memo?"\n":""):"")+(r.memo||"");
     return "<div class='ag-it"+cls+"' data-ev='"+esc(r.id)+"'"+(evColor(r.color)&&!e.ghost?" style='--c:"+r.color+"'":"")+">"+
@@ -13050,9 +13153,10 @@ document.getElementById("nextM").onclick=()=>{viewM++;if(viewM>11){viewM=0;viewY
 /* 끝난 일정: 날짜가 지났거나, 오늘이면서 종료(없으면 시작) 시각이 지난 일정. 종일 일정은 다음 날부터 */
 function isPastEvent(e){
   const t=new Date(), today=ymd(t), hm=pad(t.getHours())+":"+pad(t.getMinutes());
-  if(e.date<today)return true;
-  if(e.date>today)return false;
-  const endT=e.end||e.start;
+  const last=evEnd(e);                                    // 여러 날 일정은 마지막 날 기준
+  if(last<today)return true;
+  if(last>today)return false;
+  const endT=e.end||(last===e.date?e.start:"");
   return !!endT&&endT<=hm;
 }
 document.getElementById("closePastBtn").onclick=()=>{
@@ -13105,20 +13209,48 @@ function openEventModal(ev,date){
   const e=ev||{title:"",memo:"",date:date||ymd(new Date())};
   const linked=isNew?null:liveMeetings().find(m=>m.eventId===e.id);
   const mf=parseMoved(e.movedFrom);
+  // 반복 묶음 (기존 일정): 같은 seriesId 의 회차들
+  const series=!isNew&&e.seriesId?liveEvents().filter(x=>x.seriesId===e.seriesId).sort((a,b)=>a.date.localeCompare(b.date)):[];
+  const later=series.filter(x=>x.id!==e.id&&x.date>=e.date);           // '이 일정과 이후 모두'의 대상 (이 일정 제외)
+  const untilDef=(()=>{const [y,m,d]=e.date.split("-").map(Number);return ymd(new Date(y,m+2,d));})(); // 기본 반복 종료일: 3개월 뒤
   modal(`
     <h3>${isNew?"일정 추가":"일정 수정"}${e.done?' <span class="pill">✔ 종료됨</span>':""}${e.cancelled?' <span class="pill cx">✕ 취소됨</span>':""}</h3>
     ${e.cancelled?`<div class="info-line" style="margin:-4px 0 10px">취소 사유: ${esc(e.cancelReason||"(입력 안 함)")}</div>`:""}
     ${mf?`<div class="info-line" style="margin:-4px 0 10px"><span class="pill mv">연기</span> 원래 일정: <b>${esc(fmtMoved(mf))}</b> → 지금 <b>${esc(mdTxt(e.date))}${e.start?" "+esc(e.start):""}</b>
       <button type="button" class="btn sm ghost" id="m_clearMove">연기 표시 지우기</button></div>`:""}
-    <div class="grid2">
-      <label class="fld">날짜<input type="date" id="m_date" value="${esc(e.date)}"></label>
-      <label class="fld">제목<input id="m_title" value="${esc(e.title)}" placeholder="예: 심사 요구사항 회의"></label>
+    <label class="fld">제목<input id="m_title" value="${esc(e.title)}" placeholder="예: 심사 요구사항 회의"></label>
+    <div class="grid2" style="margin-top:10px">
+      <label class="fld">시작일<input type="date" id="m_date" value="${esc(e.date)}"></label>
+      <label class="fld"><span>종료일 <span class="mut" style="font-weight:400">(여러 날이면 마지막 날)</span></span><input type="date" id="m_endDate" value="${esc(evEnd(e))}" min="${esc(e.date)}"></label>
     </div>
     <div class="grid2" style="margin-top:10px">
       <label class="fld">시작 시간<select id="m_start">${timeOpts(e.start||"")}</select></label>
       <label class="fld">종료 시간<select id="m_end">${timeOpts(e.end||"")}</select></label>
     </div>
-    ${isNew?"":`<label class="checkrow" style="margin-top:8px"><input type="checkbox" id="m_asMove" checked> 날짜·시작 시간을 바꾸면 <b>연기</b>로 기록 (원래 자리에 취소선으로 남김)</label>`}
+    <div class="small mut" id="m_spanNote" style="margin-top:4px"></div>
+    ${isNew?`<div class="fld" style="margin-top:10px">반복
+      <div class="seg" id="m_repType">${[["","안 함"],["daily","매일"],["weekly","매주"],["monthly","매월"],["yearly","매년"]].map(([v,n])=>`<button type="button" data-rep="${v}"${v?"":' class="sel"'}>${n}</button>`).join("")}</div>
+    </div>
+    <div class="rep-panel hidden" id="m_repPanel">
+      <div id="m_repWeekly" class="hidden">
+        <div class="small mut" style="font-weight:600">요일 선택 (여러 개 가능)</div>
+        <div class="days" id="m_repDays">${[...DOWS].map((d,i)=>`<button type="button" data-d="${i}">${d}</button>`).join("")}</div>
+        <div class="row" style="margin-top:6px"><button type="button" class="btn sm ghost" id="m_repWeekdays">평일(월~금)</button><span class="spacer"></span>
+          <select id="m_repEvery" style="width:auto"><option value="1">매주</option><option value="2">2주마다</option></select></div>
+      </div>
+      <div id="m_repMonthly" class="hidden">
+        <label class="checkrow"><input type="radio" name="m_repMon" value="date" checked> 매월 <select id="m_repMonDate" style="width:auto">${Array.from({length:31},(_,i)=>`<option value="${i+1}">${i+1}일</option>`).join("")}</select> 에 반복</label>
+        <label class="checkrow" style="margin-top:6px"><input type="radio" name="m_repMon" value="nth"> 매월 <select id="m_repNthWeek" style="width:auto">${[1,2,3,4,5].map(n=>`<option value="${n}">${n}째 주</option>`).join("")}</select>
+          <select id="m_repNthDay" style="width:auto">${[...DOWS].map((d,i)=>`<option value="${i}">${d}요일</option>`).join("")}</select> 에 반복</label>
+      </div>
+      <label class="fld">반복 종료일<input type="date" id="m_until" value="${untilDef}"></label>
+      <div class="small" id="m_repPreview"></div>
+    </div>`:""}
+    ${series.length?`<div class="info-line" style="margin-top:10px"><span class="pill">🔁 반복</span> ${esc(repeatText(e))} · 전체 ${series.length}회 중 ${series.findIndex(x=>x.id===e.id)+1}번째</div>
+    <div class="checkrow" id="m_scopeRow" style="margin-top:6px;flex-wrap:wrap">적용 범위:
+      <label class="checkrow"><input type="radio" name="m_scope" value="one" checked> 이 일정만</label>
+      <label class="checkrow"><input type="radio" name="m_scope" value="after"> 이 일정과 이후 일정 모두 (${later.length+1}건)</label></div>`:""}
+    ${isNew?"":`<label class="checkrow" style="margin-top:8px"><input type="checkbox" id="m_asMove" checked> <span>날짜·시작 시간을 바꾸면 <b>연기</b>로 기록 (원래 자리에 취소선으로 남김)</span></label>`}
     <label class="fld" style="margin-top:10px">메모(선택)<textarea id="m_memo" placeholder="상세 내용">${esc(e.memo||"")}</textarea></label>
     <div class="fld" style="margin-top:10px">막대 색상
       <div class="swatches" id="m_colors">${EV_COLORS.map(c=>`<button type="button" class="sw${c.v?"":" def"}${(evColor(e.color)||"")===c.v?" sel":""}" data-color="${c.v}" title="${c.n}" aria-label="${c.n}"${c.v?` style="background:${c.v}"`:""}></button>`).join("")}</div>
@@ -13142,8 +13274,24 @@ function openEventModal(ev,date){
       const start=root.querySelector("#m_start").value;
       const end=root.querySelector("#m_end").value;
       const color=root.querySelector("#m_colors .sw.sel").dataset.color;
-      if(start&&end&&end<start){alert("종료 시간이 시작 시간보다 빠릅니다.");return;}
-      if(isNew){db.events.push({id:uid("e"),date:dt,start,end,title,memo,color,updatedAt:now(),deleted:false,origin:db.deviceLabel||db.deviceId});}
+      if(!validDate(dt)){alert("시작일을 입력하세요.");return;}
+      const endD=root.querySelector("#m_endDate").value||dt;
+      if(endD<dt){alert("종료일이 시작일보다 빠릅니다.");return;}
+      const span=daysBetween(dt,endD);
+      if(span>MAX_SPAN){alert("여러 날 일정은 최대 "+(MAX_SPAN+1)+"일까지 등록할 수 있습니다.");return;}
+      if(!span&&start&&end&&end<start){alert("종료 시간이 시작 시간보다 빠릅니다.");return;}
+      const endDate=span?endD:"", origin=db.deviceLabel||db.deviceId;
+      if(isNew){
+        const rule=readRule();
+        if(rule){
+          const msg=ruleProblem(rule,dt); if(msg){alert(msg);return;}
+          const dates=repeatDates(dt,rule);
+          if(dates.length>MAX_REPEAT){alert("반복은 최대 "+MAX_REPEAT+"회까지 등록할 수 있습니다. 반복 종료일을 앞당겨 주세요.");return;}
+          if(!dates.length){alert("반복 기간 안에 해당하는 날짜가 없습니다.");return;}
+          const sid=uid("s"), code=encodeRepeat(rule), ts=now();
+          dates.forEach(d=>db.events.push({id:uid("e"),date:d,endDate:span?addDaysStr(d,span):"",start,end,title,memo,color,seriesId:sid,repeat:code,updatedAt:ts,deleted:false,origin}));
+        }else db.events.push({id:uid("e"),date:dt,endDate,start,end,title,memo,color,updatedAt:now(),deleted:false,origin});
+      }
       else{
         const t=byId(db.events,e.id);
         const asMove=root.querySelector("#m_asMove");
@@ -13151,10 +13299,72 @@ function openEventModal(ev,date){
           const prev=t.date+(t.start?" "+t.start:""), next=dt+(start?" "+start:"");
           t.movedFrom=(t.movedFrom===next)?"":prev;             // 원래 자리로 되돌리면 연기 표시 해제, 아니면 직전 일정을 기록
         }
-        t.date=dt;t.start=start;t.end=end;t.title=title;t.memo=memo;t.color=color;t.updatedAt=now();
+        t.date=dt;t.endDate=endDate;t.start=start;t.end=end;t.title=title;t.memo=memo;t.color=color;t.updatedAt=now();
+        // 반복 일정 '이 일정과 이후 모두': 제목·시간·메모·색·기간(일수)을 이후 회차에도 적용 (각 회차의 날짜는 그대로)
+        const scope=root.querySelector("input[name=m_scope]:checked");
+        if(scope&&scope.value==="after")later.forEach(o=>{const x=byId(db.events,o.id);
+          x.title=title;x.start=start;x.end=end;x.memo=memo;x.color=color;x.endDate=span?addDaysStr(x.date,span):"";x.updatedAt=now();});
       }
       save();closeModal();renderAll();
     };
+    const $=(k)=>root.querySelector(k);
+    let lastStart=$("#m_date").value;
+    const spanNote=()=>{
+      const a=$("#m_date").value,b=$("#m_endDate").value;
+      const n=validDate(a)&&validDate(b)&&b>a?daysBetween(a,b)+1:0;
+      $("#m_spanNote").textContent=n?n+"일 일정 — 시작 시간은 첫날("+mdTxt(a)+"), 종료 시간은 마지막 날("+mdTxt(b)+") 기준입니다.":"";
+    };
+    /* 반복 입력 → 규칙 (안 함이면 null) */
+    const readRule=()=>{
+      const t=$("#m_repType .sel"); if(!t||!t.dataset.rep)return null;
+      const f=t.dataset.rep, until=$("#m_until").value, a=$("#m_date").value;
+      if(f==="daily")return {freq:f,until};
+      if(f==="weekly")return {freq:f,days:[...root.querySelectorAll("#m_repDays .sel")].map(b=>+b.dataset.d),every:+$("#m_repEvery").value,until};
+      if(f==="monthly")return root.querySelector("input[name=m_repMon]:checked").value==="nth"
+        ?{freq:f,nth:+$("#m_repNthWeek").value,ndow:+$("#m_repNthDay").value,until}:{freq:f,mday:+$("#m_repMonDate").value,until};
+      return {freq:"yearly",mmdd:validDate(a)?a.slice(5,7)+a.slice(8):"",until};
+    };
+    const ruleProblem=(r,a)=>!validDate(r.until)||r.until<a?"반복 종료일을 시작일 이후로 정하세요."
+      :r.freq==="weekly"&&!r.days.length?"반복할 요일을 하나 이상 선택하세요.":"";
+    /* 시작일에 맞춘 기본값 (사용자가 아직 고치지 않은 칸만) */
+    let repTouched=false;
+    const repDefaults=()=>{
+      if(!$("#m_repType")||repTouched)return;
+      const a=$("#m_date").value; if(!validDate(a))return;
+      const d=+a.slice(8), w=new Date(a+"T00:00").getDay();
+      root.querySelectorAll("#m_repDays button").forEach(b=>b.classList.toggle("sel",+b.dataset.d===w));
+      $("#m_repMonDate").value=String(d); $("#m_repNthWeek").value=String(Math.ceil(d/7)); $("#m_repNthDay").value=String(w);
+    };
+    const repPreview=()=>{
+      if(!$("#m_repType"))return;
+      const r=readRule(), f=r?r.freq:"";
+      $("#m_repPanel").classList.toggle("hidden",!f);
+      $("#m_repWeekly").classList.toggle("hidden",f!=="weekly");
+      $("#m_repMonthly").classList.toggle("hidden",f!=="monthly");
+      const pv=$("#m_repPreview"); if(!f){pv.textContent="";return;}
+      const a=$("#m_date").value, prob=ruleProblem(r,a), ds=prob?[]:repeatDates(a,r);
+      pv.style.color=!prob&&ds.length&&ds.length<=MAX_REPEAT?"":"var(--bad)";
+      const dw=(x)=>fmtDot(x)+"("+DOWS[new Date(x+"T00:00").getDay()]+")";
+      pv.textContent=prob||(ds.length>MAX_REPEAT?"반복은 최대 "+MAX_REPEAT+"회까지입니다. 반복 종료일을 앞당겨 주세요."
+        :!ds.length?"반복 기간 안에 해당하는 날짜가 없습니다."
+        :"🔁 "+describeRepeat(r)+" · 총 "+ds.length+"회 · "+dw(ds[0])+" ~ "+dw(ds[ds.length-1])+(f==="monthly"&&r.mday>28?" (그 날짜가 없는 달은 건너뜀)":""));
+    };
+    if($("#m_repType")){
+      root.querySelectorAll("#m_repType button").forEach(b=>b.onclick=()=>{root.querySelectorAll("#m_repType button").forEach(x=>x.classList.toggle("sel",x===b));repPreview();});
+      root.querySelectorAll("#m_repDays button").forEach(b=>b.onclick=()=>{b.classList.toggle("sel");repTouched=true;repPreview();});
+      $("#m_repWeekdays").onclick=()=>{root.querySelectorAll("#m_repDays button").forEach(b=>b.classList.toggle("sel",+b.dataset.d>=1&&+b.dataset.d<=5));repTouched=true;repPreview();};
+      ["#m_repEvery","#m_repMonDate","#m_repNthWeek","#m_repNthDay","#m_until"].forEach(k=>$(k).addEventListener("change",()=>{if(k!=="#m_until")repTouched=true;repPreview();}));
+      root.querySelectorAll("input[name=m_repMon]").forEach(x=>x.addEventListener("change",repPreview));
+      repDefaults();
+    }
+    $("#m_date").addEventListener("change",()=>{ // 시작일을 옮기면 종료일도 같은 일수만큼 옮김
+      const a=$("#m_date").value,b=$("#m_endDate").value;
+      if(validDate(a)&&validDate(lastStart)&&validDate(b)&&b>=lastStart)$("#m_endDate").value=addDaysStr(a,daysBetween(lastStart,b));
+      else if(validDate(a))$("#m_endDate").value=a;
+      $("#m_endDate").min=a;lastStart=a;spanNote();repDefaults();repPreview();
+    });
+    $("#m_endDate").addEventListener("change",spanNote);
+    spanNote();repPreview();
     root.querySelectorAll("#m_colors .sw").forEach(b=>b.onclick=()=>{
       root.querySelectorAll("#m_colors .sw").forEach(x=>x.classList.toggle("sel",x===b));
     });
@@ -13183,7 +13393,13 @@ function openEventModal(ev,date){
       openMtModal(null,{date:root.querySelector("#m_date").value,time:s?s+(en?"~"+en:""):"",topic:root.querySelector("#m_title").value.trim(),eventId:e.id});
     };
     const del=root.querySelector("#m_del");
-    if(del)del.onclick=()=>{if(confirm("이 일정을 삭제할까요?\n\n※ 회의가 열리지 않은 경우라면 '삭제' 대신 '✕ 취소 처리'를 쓰면 기록이 취소선으로 남습니다.")){const t=byId(db.events,e.id);t.deleted=true;t.updatedAt=now();save();closeModal();renderAll();}};
+    if(del)del.onclick=()=>{
+      const scope=root.querySelector("input[name=m_scope]:checked"), all=scope&&scope.value==="after";
+      const msg=all?"이 일정과 이후 반복 일정 "+(later.length+1)+"건을 삭제할까요?":"이 일정을 삭제할까요?";
+      if(!confirm(msg+"\n\n※ 회의가 열리지 않은 경우라면 '삭제' 대신 '✕ 취소 처리'를 쓰면 기록이 취소선으로 남습니다."))return;
+      [e,...(all?later:[])].forEach(o=>{const t=byId(db.events,o.id);t.deleted=true;t.updatedAt=now();});
+      save();closeModal();renderAll();
+    };
     root.querySelector("#m_cancel").onclick=closeModal;
   });
 }
@@ -13373,13 +13589,13 @@ function updateExpSummary(){
 }
 /* 전송용 압축 포맷: 키 이름을 없애 배열로 → QR 장수 감소 */
 /* v2: 배열 '끝'에만 필드를 추가 → 구버전 패치(v1)도 그대로 읽힘
-   일정  [.., 9:color, 10:cancelled, 11:cancelReason, 12:movedFrom]
+   일정  [.., 9:color, 10:cancelled, 11:cancelReason, 12:movedFrom, 13:endDate, 14:seriesId, 15:repeat]  (13~15 는 v2.1)
    회의록 [.., 7:deleted, 8:cancelled, 9:eventId, 10:actions[[id,text,owner,due,done]]] */
 function packPatch(p){
   return {v:2,t:PREFIX,f:[p.from.id,p.from.label],g:p.generatedAt,
     sc:[p.scope.from||"",p.scope.to||"",p.scope.changedOnly?1:0],
     e:(p.events||[]).map(e=>[e.id,e.date||"",e.start||"",e.end||"",e.title||"",e.memo||"",e.updatedAt||0,e.deleted?1:0,e.done?1:0,e.color||"",
-      e.cancelled?1:0,e.cancelReason||"",e.movedFrom||""]),
+      e.cancelled?1:0,e.cancelReason||"",e.movedFrom||"",evEnd(e)!==e.date?e.endDate:"",e.seriesId||"",e.repeat||""]),
     m:(p.meetings||[]).map(m=>[m.id,m.date||"",m.time||"",m.topic||"",m.check||"",m.note||"",m.updatedAt||0,m.deleted?1:0,
       m.cancelled?1:0,m.eventId||"",(m.actions||[]).map(a=>[a.id||"",a.text||"",a.owner||"",a.due||"",a.done?1:0])])};
 }
@@ -13388,7 +13604,9 @@ function unpackPatch(o){
   const lbl=o.f?o.f[1]:"", v2=(o.v||1)>=2;
   // 구버전 패치에는 v2 필드 키를 아예 만들지 않음 → 적용(Object.assign) 시 이 기기의 취소·연기·액션아이템 값이 지워지지 않음
   const ev=(o.e||[]).map(a=>{const r={id:a[0],date:a[1],start:a[2],end:a[3],title:a[4],memo:a[5],updatedAt:a[6],deleted:!!a[7],done:!!a[8],color:a[9]||"",origin:lbl};
-    if(v2){r.cancelled=!!a[10];r.cancelReason=a[11]||"";r.movedFrom=a[12]||"";}return r;});
+    if(v2){r.cancelled=!!a[10];r.cancelReason=a[11]||"";r.movedFrom=a[12]||"";}
+    if(a.length>13){r.endDate=validDate(a[13])&&a[13]>r.date?a[13]:"";r.seriesId=String(a[14]||"");r.repeat=parseRepeat(a[15])?String(a[15]):"";} // v2.1: 여러 날·반복
+    return r;});
   const mt=(o.m||[]).map(a=>{const r={id:a[0],date:a[1],time:a[2],topic:a[3],check:a[4],note:a[5],updatedAt:a[6],deleted:!!a[7],origin:lbl};
     if(v2){r.cancelled=!!a[8];r.eventId=a[9]||"";
       r.actions=(Array.isArray(a[10])?a[10]:[]).map(x=>({id:x[0]||uid("a"),text:x[1]||"",owner:x[2]||"",due:x[3]||"",done:!!x[4]}));}
@@ -13671,7 +13889,7 @@ function diffRecord(incoming,kind){
   return{action:"upd",conflict,local};
 }
 function labelText(e,kind){
-  if(kind==="e")return (e.cancelled?"[취소] ":e.done?"[종료] ":"")+(e.movedFrom?"[연기: "+e.movedFrom+"→] ":"")+(e.date||"")+(e.start?" "+e.start+(e.end?"~"+e.end:""):"")+" · "+(e.title||"")+(e.memo?" ("+e.memo.slice(0,20)+")":"");
+  if(kind==="e")return (e.cancelled?"[취소] ":e.done?"[종료] ":"")+(e.movedFrom?"[연기: "+e.movedFrom+"→] ":"")+(evEnd(e)!==e.date?fmtRange(e):(e.date||"")+(e.start?" "+e.start+(e.end?"~"+e.end:""):""))+" · "+(e.title||"")+(e.seriesId?" 🔁":"")+(e.memo?" ("+e.memo.slice(0,20)+")":"");
   return (e.cancelled?"[취소] ":"")+(e.date||"")+" "+(e.time||"")+" · "+(e.topic||"")+(e.actions&&e.actions.length?" · 액션아이템 "+e.actions.length+"건":"");
 }
 function showReview(p){
@@ -13753,9 +13971,9 @@ function csvCell(s){s=String(s==null?"":s);return /[",\n]/.test(s)?'"'+s.replace
 document.getElementById("csvBtn").onclick=()=>{
   const BOM="﻿";
   const mtSet=meetingEventSet();
-  let ev=BOM+"날짜,시작,종료,제목,메모,상태,취소사유,원래일정(연기),회의록,수정시각\n";
-  liveEvents().sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.start||"").localeCompare(b.start||"")).forEach(e=>{ev+=[e.date,e.start||"",e.end||"",e.title,e.memo,
-    e.cancelled?"취소":e.done?"종료":"진행",e.cancelReason||"",e.movedFrom||"",mtSet.has(e.id)?"있음":"",fmtTs(e.updatedAt)].map(csvCell).join(",")+"\n";});
+  let ev=BOM+"날짜,시작,종료,종료일,제목,메모,상태,반복,취소사유,원래일정(연기),회의록,수정시각\n";
+  liveEvents().sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.start||"").localeCompare(b.start||"")).forEach(e=>{ev+=[e.date,e.start||"",e.end||"",evEnd(e)!==e.date?evEnd(e):"",e.title,e.memo,
+    e.cancelled?"취소":e.done?"종료":"진행",e.seriesId?repeatText(e):"",e.cancelReason||"",e.movedFrom||"",mtSet.has(e.id)?"있음":"",fmtTs(e.updatedAt)].map(csvCell).join(",")+"\n";});
   download("일정_"+tsName()+".csv",ev,"text/csv");
   const actTxt=(m)=>(m.actions||[]).map(a=>(a.done?"☑ ":"☐ ")+a.text+(a.owner||a.due?" ("+[a.owner,a.due].filter(Boolean).join(", ")+")":"")).join("\n");
   let mt=BOM+"일자,시간,주제,확인사항,액션아이템,비고,상태,연결일정,수정시각\n";

@@ -171,3 +171,41 @@ test("4-7 v2: 취소·연기·회의록 연결·액션아이템이 상대 기기
   }, other);
   await other.context().close();
 });
+
+test("4-8 v2.1: 여러 날·반복 정보가 상대 기기로 전달되고, v2.0 앱이 보낸 패치는 이 정보를 지우지 않는다", async ({ page, browser }, testInfo) => {
+  const trip = ev("2026-11-25", "출장", { start: "09:00", end: "18:00", endDate: "2026-11-27" });
+  const weekly = ["2026-11-24", "2026-12-01"].map((d) => ev(d, "주간 회의", { start: "10:00", seriesId: "s_w", repeat: "weekly:2:2026-12-01" }));
+  const { step } = await startScenario(page, testInfo, "4-8_동기화_여러날_반복", { db: makeDb({ deviceLabel: "내부", events: [trip, ...weekly] }) });
+  let patch, other;
+
+  await step("[내부] 파일로 내보내기", async () => { patch = await exportPatchFile(page); });
+  other = await openOtherDevice(browser, testInfo, makeDb({ deviceLabel: "외부", deviceId: "dev_other" }));
+  await step("[외부] 미리보기: '11/25 09:00 ~ 11/27 18:00 · 출장', 반복 회차에 🔁", async () => {
+    await importPatchFile(other, patch.file);
+    await expect(reviewItem(other, "출장")).toContainText("11/25 09:00 ~ 11/27 18:00 · 출장");
+    await expect(modalBox(other).locator(".rev .it").filter({ hasText: "주간 회의 🔁" })).toHaveCount(2);
+  }, other);
+  await step("[외부] 적용 → 출장이 25~27일에 걸쳐 표시, 주간 회의는 같은 반복 묶음", async () => {
+    await modalBox(other).locator("#m_apply").click();
+    await openTab(other, "달력");
+    await expect(chip(other, "2026-11-26", "출장")).toHaveText("↳ 출장");
+    await expect(chip(other, "2026-11-27", "출장")).toHaveText("↳ 출장 ~18:00");
+    const es = (await readDb(other)).events;
+    expect(es.find((e) => e.id === trip.id).endDate).toBe("2026-11-27");
+    expect(es.filter((e) => e.seriesId === "s_w")).toHaveLength(2);
+  }, other);
+  await step("[외부] v2.0 앱이 보낸 패치(출장 메모만 수정, 여러 날·반복 칸 없음) 적용 → 종료일·반복 묶음 유지", async () => {
+    const text = await other.evaluate(({ trip, w }) => "PSYNC1|" + LZString.compressToBase64(JSON.stringify({
+      v: 2, t: "PSYNC1", f: ["dev_v20", "v2.0 PC"], g: Date.now(), sc: ["", "", 0],
+      e: [[trip, "2026-11-25", "09:00", "18:00", "출장", "v2.0 에서 고친 메모", Date.now() + 1000, 0, 0, "", 0, "", ""],
+          [w, "2026-11-24", "10:00", "", "주간 회의", "", Date.now() + 1000, 0, 0, "", 0, "", ""]], m: [] })), { trip: trip.id, w: weekly[0].id });
+    const file = testInfo.outputPath("v20-patch.json");
+    fs.writeFileSync(file, text);
+    await importPatchFile(other, file);
+    await modalBox(other).locator("#m_apply").click();
+    const es = (await readDb(other)).events;
+    expect(es.find((e) => e.id === trip.id)).toMatchObject({ memo: "v2.0 에서 고친 메모", endDate: "2026-11-27" });
+    expect(es.find((e) => e.id === weekly[0].id)).toMatchObject({ seriesId: "s_w", repeat: "weekly:2:2026-12-01" });
+  }, other);
+  await other.context().close();
+});

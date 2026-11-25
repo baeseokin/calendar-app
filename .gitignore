@@ -11,3 +11,7 @@ e2e-results/
 
 # 배포 파일 (npm run release 가 만듦 — GitHub Release 에 올림)
 dist/
+
+# 사용자 매뉴얼 중간 산출물 (npm run manual 이 다시 만듦 — 결과 PDF 만 저장소에 둠)
+docs/manual/shots/
+docs/manual/out/

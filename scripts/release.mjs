@@ -14,7 +14,7 @@
 //
 // 배포 파일 (dist/vX.Y.Z/)
 //   project-calendar-app.html   사용자 PC 에는 항상 이 이름으로 덮어씀 (파일 이름이 바뀌면 브라우저 저장 데이터가 안 보일 수 있음)
-//   사용자매뉴얼.html
+//   사용자매뉴얼_PC.pdf · 사용자매뉴얼_모바일.pdf   준비 단계에서 npm run manual 로 다시 만든 PDF
 //   RELEASE_NOTES.md            CHANGELOG.md 의 이번 버전 항목
 //   SHA256SUMS.txt              파일 해시 — 사내 보안 반입 때 '검토받은 파일과 같은 파일인지' 확인용
 import { execFileSync, spawnSync } from "child_process";
@@ -22,12 +22,13 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { buildManual, EDITIONS } from "./manual/build.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const APP = "project-calendar-app.html";
-const MANUAL = "사용자매뉴얼.html";
+const MANUALS = EDITIONS.map((e) => e.file); // 사용자매뉴얼_PC.pdf, 사용자매뉴얼_모바일.pdf
 const CHANGELOG = "CHANGELOG.md";
-const PREPARED_FILES = [APP, "package.json", "package-lock.json", CHANGELOG]; // 준비 단계가 바꾸는 파일
+const PREPARED_FILES = [APP, "package.json", "package-lock.json", CHANGELOG, ...MANUALS]; // 준비 단계가 바꾸는 파일
 const VER_RE = /const APP_VER="(\d+\.\d+\.\d+)";/;
 
 const args = process.argv.slice(2);
@@ -72,10 +73,10 @@ function build(ver, outDir) {
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
   fs.copyFileSync(p(APP), path.join(outDir, APP));
-  fs.copyFileSync(p(MANUAL), path.join(outDir, MANUAL));
+  for (const m of MANUALS) fs.copyFileSync(p(m), path.join(outDir, m));
   const notes = changelogSection(ver) || `## [${ver}]\n\n(CHANGELOG.md 에 이 버전 항목이 없습니다)`;
   fs.writeFileSync(path.join(outDir, "RELEASE_NOTES.md"), `# 프로젝트 일정·회의 관리 v${ver}\n\n${notes}\n`);
-  const sums = [APP, MANUAL, "RELEASE_NOTES.md"].map((f) => `${sha256(path.join(outDir, f))}  ${f}`).join("\n") + "\n";
+  const sums = [APP, ...MANUALS, "RELEASE_NOTES.md"].map((f) => `${sha256(path.join(outDir, f))}  ${f}`).join("\n") + "\n";
   fs.writeFileSync(path.join(outDir, "SHA256SUMS.txt"), sums);
   return sums;
 }
@@ -128,10 +129,13 @@ if (!(ver === cur && prepared)) {
     `**두 PC 모두 교체 필요: ${isMajorBump(cur, ver) ? "예 (주 버전 변경 — 동기화 형식이 바뀜)" : "아니오"}**\n\n` +
     `### 바뀐 점 (초안: ${prev || "처음"} 이후 커밋 제목 — 사용자가 읽을 문장으로 고쳐 주세요)\n${log || "- (커밋 없음)"}\n`;
   write(CHANGELOG, `${head}\n${draft}${old ? "\n" + old + "\n" : ""}`);
+  console.log("📕 사용자 매뉴얼을 새 버전으로 다시 만듭니다 (화면 캡처 포함)");
+  await buildManual({ shots: true });
   console.log(`📝 v${cur} → v${ver} 준비를 마쳤습니다.
    - ${APP}: APP_VER = "${ver}"
    - package.json: version = ${ver}
    - ${CHANGELOG}: [${ver}] 초안 추가
+   - ${MANUALS.join(", ")}: 새 버전으로 다시 만듦 (화면이 바뀐 기능이 있으면 docs/manual/manual.src.html 도 고친 뒤 npm run manual)
 다음: ${CHANGELOG} 의 [${ver}] 항목을 읽고 다듬은 뒤, 같은 명령을 다시 실행하세요.
    npm run release -- ${target}${flags.has("--allow-branch") ? " --allow-branch" : ""}`);
   process.exit(0);
@@ -162,6 +166,6 @@ console.log(`
 ${sums}
 다음 단계 (직접 실행):
    git push origin ${branch} --follow-tags
-   gh release create v${ver} "${out}/${APP}" "${out}/${MANUAL}" "${out}/SHA256SUMS.txt" --title "v${ver}" --notes-file "${out}/RELEASE_NOTES.md"
+   gh release create v${ver} "${out}/${APP}" ${MANUALS.map((m) => `"${out}/${m}"`).join(" ")} "${out}/SHA256SUMS.txt" --title "v${ver}" --notes-file "${out}/RELEASE_NOTES.md"
 사내 반입: SHA256SUMS.txt 의 해시값을 보안 검토 요청서에 함께 적으세요.
 사용자 PC: 기존 파일을 먼저 백업(설정 → 전체 백업)한 뒤, 같은 이름(${APP})으로 덮어쓰세요.`);

@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>프로젝트 일정·회의 관리 사용자 매뉴얼</title>
+<!--
+  사용자 매뉴얼 원본 (PC판·모바일판 공통). PDF 를 직접 고치지 말고 이 파일을 고친 뒤 `npm run manual` 을 실행하세요.
+  - data-for="pc" / data-for="mobile" 이 붙은 요소는 그 판에만 들어갑니다. 없으면 두 판 모두.
+  - <figure data-shot="이름"> 자리에 docs/manual/shots/이름.jpg 가 들어갑니다 (PC 캡처: 이름, 휴대폰 캡처: m-이름).
+  - 그림 속 빨간 번호와 본문의 <span class="n">1</span> 번호를 맞춥니다.
+  - 장 번호·목차는 자동입니다. 다른 장을 가리킬 때는 번호 대신 장 이름('취소와 연기')으로 적습니다.
+  - {{APP_VER}} · {{DATE}} · {{EDITION}} 은 만들 때 채워집니다.
+-->
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;color:#1d2430;font-family:"Pretendard","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;font-size:10.5pt;line-height:1.7;counter-reset:ch}
+  h1{font-size:24pt;margin:0 0 5mm;line-height:1.3}
+  h2{font-size:16pt;margin:0 0 4mm;padding-bottom:2mm;border-bottom:2.5px solid #2f6fe0;break-after:avoid}
+  section>h2{counter-increment:ch}
+  section>h2::before{content:counter(ch);display:inline-block;min-width:9mm;color:#2f6fe0}
+  h3{font-size:12pt;margin:5mm 0 2mm;break-after:avoid}
+  section{break-before:page}
+  p{margin:1.5mm 0}
+  ul,ol{margin:1.5mm 0}
+  .cover{min-height:240mm;display:flex;flex-direction:column;justify-content:center;break-after:page}
+  .cover .ed{display:inline-block;align-self:flex-start;background:#2f6fe0;color:#fff;font-weight:800;font-size:12pt;border-radius:2mm;padding:1mm 4mm;margin-bottom:4mm}
+  .cover .ver{font-size:13pt;color:#2f6fe0;font-weight:800}
+  .cover .sub{font-size:11pt;color:#667085;margin-top:3mm}
+  .cover figure{margin-top:10mm}
+  #toc ol{padding-left:6mm;font-size:11.5pt;line-height:2}
+  figure{margin:3mm 0 4mm;break-inside:avoid;text-align:center}
+  figure img{display:block;margin:0 auto;max-width:100%;border:1px solid #c9d1dc;border-radius:6px;break-inside:avoid} /* 그림자는 쓰지 않음: 쪽 경계에서 다음 쪽 그림의 그림자만 앞쪽에 남는 현상 */
+  figure.half img{max-width:78%}
+  figure.phone img{width:66mm}
+  figcaption{font-size:9.5pt;color:#667085;margin-top:1.5mm}
+  ol.steps{padding-left:7mm}
+  ol.steps li{margin-bottom:1.2mm}
+  .n{display:inline-block;width:5.2mm;height:5.2mm;border-radius:50%;background:#ff2d55;color:#fff;font-size:8.5pt;font-weight:800;line-height:5.2mm;text-align:center;vertical-align:.3mm;margin-right:1mm}
+  .btn{display:inline-block;border:1px solid #cfd6e1;background:#f2f5fa;border-radius:1.5mm;padding:0 1.6mm;font-size:9.5pt;font-weight:700;white-space:nowrap}
+  table{width:100%;border-collapse:collapse;margin:2mm 0 3mm;font-size:9.8pt;break-inside:avoid}
+  th,td{border:1px solid #d5dbe4;padding:1.6mm 2.2mm;text-align:left;vertical-align:top}
+  th{background:#eef3fd}
+  td.c{text-align:center;width:9mm}
+  .box{border-radius:2mm;padding:2.5mm 3.5mm;margin:3mm 0;font-size:10pt;break-inside:avoid}
+  .tip{background:#eef3fd;border-left:1.2mm solid #2f6fe0}
+  .warn{background:#fff6e0;border-left:1.2mm solid #ecc66a}
+  .row2{display:flex;gap:6mm;align-items:flex-start;break-inside:avoid;margin:2mm 0}
+  .row2>figure{flex:0 0 auto;margin:0}
+  .row2>div{flex:1}
+  .strike{text-decoration:line-through;opacity:.65}
+  .tag{font-size:8.5pt;font-weight:800;padding:0 1.5mm;border-radius:1mm;color:#fff}
+  .t-add{background:#1f8a5b}.t-upd{background:#2f6fe0}.t-del{background:#c4382f}.t-cf{background:#b7861d}.t-skip{background:#888}
+  dt{font-weight:800;margin-top:3mm} dd{margin:.5mm 0 0}
+  /* 모바일판(A5): 글자를 키우고 그림은 한 줄에 하나 */
+  body.mobile{font-size:11pt}
+  body.mobile .row2{display:block}
+  body.mobile figure.phone img{width:72mm}
+  body.mobile h1{font-size:21pt}
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <span class="ed">{{EDITION}}</span>
+  <h1>프로젝트 일정·회의 관리<br>사용자 매뉴얼</h1>
+  <div class="ver">앱 버전 v{{APP_VER}}</div>
+  <div class="sub">인터넷 없이 쓰는 일정·회의록 관리 프로그램 · 내부(폐쇄망) PC와 외부 PC·휴대폰 동기화 · {{DATE}}</div>
+  <figure data-for="pc" data-shot="cover"><figcaption>PC 첫 화면 (달력)</figcaption></figure>
+  <figure data-for="mobile" class="phone" data-shot="m-cover"><figcaption>휴대폰 첫 화면 (달력)</figcaption></figure>
+</div>
+
+<div id="toc">
+  <h2>목차</h2>
+  <ol></ol>
+  <div class="box tip">이 매뉴얼의 화면은 <b>'화이트' 디자인</b>으로 찍었습니다. 쓰시는 화면은 <b>⚙ 설정 → 화면 디자인</b>에 따라 색이 다를 수 있지만, 버튼 위치와 사용법은 같습니다.<br>
+  그림 속 <span class="n">1</span><span class="n">2</span> 같은 빨간 번호는 본문의 단계 번호와 같습니다.</div>
+  <div class="box tip" data-for="pc">휴대폰에서 쓰는 방법은 <b>모바일판 매뉴얼</b>(사용자매뉴얼_모바일.pdf)을 보세요.</div>
+  <div class="box tip" data-for="mobile">PC에서 쓰는 방법은 <b>PC판 매뉴얼</b>(사용자매뉴얼_PC.pdf)을 보세요. 이 매뉴얼은 휴대폰 화면 기준입니다.</div>
+</div>
+
+<!-- ================================================================== 시작하기 -->
+<section>
+  <h2>시작하기</h2>
+  <h3>준비물</h3>
+  <ul>
+    <li><b>project-calendar-app.html</b> 파일 하나. 설치나 인터넷 연결은 필요 없습니다.</li>
+    <li data-for="pc">Chrome 또는 Edge 브라우저.</li>
+    <li data-for="mobile">휴대폰의 Chrome(안드로이드) 또는 Safari(아이폰) 브라우저.</li>
+  </ul>
+
+  <div data-for="pc">
+    <h3>처음 실행하기</h3>
+    <div class="row2">
+      <figure class="half" data-shot="start-device" style="flex-basis:52%"><figcaption>처음 열면 나오는 기기 선택 창</figcaption></figure>
+      <div>
+        <ol class="steps">
+          <li>파일을 원하는 폴더에 두고 <b>더블클릭</b>합니다.</li>
+          <li>"이 기기는 어디인가요?" 창에서 이 PC에 맞는 버튼을 누릅니다.<br>
+            <span class="n">1</span> 폐쇄망 PC → <span class="btn">내부 (폐쇄망)</span><br>
+            <span class="n">2</span> 인터넷 PC → <span class="btn">외부</span></li>
+          <li>화면 왼쪽 위에 <b>"이 기기: 내부"</b>(또는 외부)가 보이면 준비 끝입니다.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <div data-for="mobile">
+    <h3>휴대폰에서 열기</h3>
+    <ol class="steps">
+      <li>파일을 휴대폰으로 옮깁니다 (메일 첨부, 메신저 '나에게 보내기' 등 조직에서 허용된 방법).</li>
+      <li>파일을 <b>브라우저(Chrome·Safari)로</b> 엽니다. 메신저·메일 앱 안의 <b>미리보기 화면에서는 기록이 저장되지 않을 수 있으니</b>, "다른 앱으로 열기" 또는 "브라우저로 열기"를 고르세요. 휴대폰 기종에 따라 메뉴 이름이 다를 수 있습니다.</li>
+      <li>처음 열면 "이 기기는 어디인가요?" 창이 나옵니다. 휴대폰은 보통 <span class="n">2</span> <span class="btn">외부</span>를 고릅니다. 나중에 설정에서 "휴대폰"처럼 직접 이름을 바꿀 수 있습니다.</li>
+    </ol>
+    <figure class="phone" data-shot="m-start-device"><figcaption>처음 열면 나오는 기기 선택 창</figcaption></figure>
+  </div>
+
+  <div class="box warn"><b>데이터는 "그 기기의 그 브라우저" 안에만 저장됩니다.</b><br>
+    · 같은 기기, 같은 브라우저로 다시 열면 그대로 있습니다.<br>
+    · 다른 브라우저나 다른 기기에서 열면 빈 화면입니다. <b>'다른 기기와 동기화'</b> 또는 <b>'백업·엑셀·설정'</b> 장을 보고 옮기세요.<br>
+    · 브라우저의 "인터넷 사용 기록 삭제"에서 사이트 데이터를 지우면 기록도 지워집니다. <b>정기적으로 전체 백업</b>을 해 두세요.</div>
+
+  <h3>새 버전으로 바꾸기</h3>
+  <ol class="steps">
+    <li><span class="btn">⚙ 설정</span> → <span class="btn">⬇ 전체 백업(JSON)</span>으로 백업 파일을 받아 둡니다.</li>
+    <li>새 파일을 기존 파일과 <b>같은 곳에 같은 이름(project-calendar-app.html)으로 덮어씁니다.</b></li>
+    <li>같은 브라우저로 열어 <b>버전 번호</b>(<span data-for="pc">화면 맨 아래</span><span data-for="mobile">설정 탭의 '사용 안내' 옆</span>)가 바뀌었는지, 기존 일정이 그대로 있는지 확인합니다. 안 보이면 1번의 백업 파일로 <b>백업 복원</b>을 하세요.</li>
+  </ol>
+  <div class="box tip"><b>버전 번호 읽는 법</b> — 앞자리가 바뀌면(예: v1 → v2) 동기화 방식이 달라진 것이니 <b>모든 기기를 함께</b> 바꾸세요. 뒷자리만 바뀌면(예: v2.0.0 → v2.1.0) 하나씩 바꿔도 됩니다.</div>
+</section>
+
+<!-- ================================================================== 화면 둘러보기 -->
+<section>
+  <h2>화면 둘러보기</h2>
+  <div data-for="pc">
+    <figure data-shot="overview"><figcaption>PC 화면 구성</figcaption></figure>
+    <table>
+      <tr><th class="c">번호</th><th style="width:28%">이름</th><th>하는 일</th></tr>
+      <tr><td class="c"><span class="n">1</span></td><td>이 기기 이름</td><td>내부 / 외부. 동기화할 때 어느 기기에서 온 내용인지 구분합니다.</td></tr>
+      <tr><td class="c"><span class="n">2</span></td><td>마지막 동기화</td><td>다른 기기의 내용을 마지막으로 가져온 시각.</td></tr>
+      <tr><td class="c"><span class="n">3</span></td><td>탭</td><td><b>달력 · 회의록 · 할 일 · 동기화 · 설정</b>. "할 일" 옆 숫자는 아직 안 끝난 할 일 수입니다.</td></tr>
+      <tr><td class="c"><span class="n">4</span></td><td>달 이동</td><td><span class="btn">◀</span> <span class="btn">▶</span> 이전·다음 달, <span class="btn">오늘</span> 이번 달, <span class="btn">✔ 지난 일정 종료</span> 끝난 일정 한꺼번에 종료.</td></tr>
+      <tr><td class="c"><span class="n">5</span></td><td>달력</td><td>날짜 칸의 빈 곳을 누르면 일정 추가, 일정 막대를 누르면 수정. 오늘은 파란 테두리.</td></tr>
+      <tr><td class="c"><span class="n">6</span></td><td>안내줄</td><td>프로그램 버전, 일정·회의록 건수.</td></tr>
+    </table>
+    <h3>일정 막대 모양 읽기</h3>
+    <figure data-shot="legend"><figcaption>막대 모양으로 일정의 상태를 알 수 있습니다</figcaption></figure>
+    <table>
+      <tr><th class="c">번호</th><th style="width:38%">모양</th><th>뜻</th></tr>
+      <tr><td class="c"><span class="n">1</span></td><td><b>14:00</b> 고객사 미팅</td><td>앞으로 할 일정 (막대 색은 직접 고를 수 있음)</td></tr>
+      <tr><td class="c"><span class="n">2</span></td><td>✔ <span class="strike">09:30 주간 스탠드업</span></td><td>끝난(종료) 일정</td></tr>
+      <tr><td class="c"><span class="n">3</span></td><td>✕ <span class="strike">11:00 협력사 통화</span> (회색)</td><td>취소된 일정</td></tr>
+      <tr><td class="c"><span class="n">4</span></td><td><i class="strike">15:00 디자인 리뷰 → 11/27</i></td><td>연기되기 전 원래 자리</td></tr>
+      <tr><td class="c"><span class="n">5</span></td><td>↪ 15:00 디자인 리뷰</td><td>연기되어 옮겨 온 일정</td></tr>
+      <tr><td class="c"><span class="n">6</span></td><td>… 📝</td><td>회의록이 연결된 일정</td></tr>
+    </table>
+    <div class="row2">
+      <figure data-shot="more" style="flex-basis:30%"><figcaption>칸에 다 안 들어갈 때</figcaption></figure>
+      <div><p>한 칸에 일정이 많으면 들어가는 만큼만 보이고 나머지는 <span class="n">1</span> <b>+3</b>처럼 개수로 접힙니다. 브라우저 창을 키우면 더 많이 보입니다.</p></div>
+    </div>
+  </div>
+
+  <div data-for="mobile">
+    <figure class="phone" data-shot="m-overview"><figcaption>휴대폰 화면 구성</figcaption></figure>
+    <table>
+      <tr><th class="c">번호</th><th>하는 일</th></tr>
+      <tr><td class="c"><span class="n">1</span></td><td><span class="btn">◀</span> <span class="btn">▶</span> 이전·다음 달, <span class="btn">오늘</span>, <span class="btn">✔ 지난 일정 종료</span>. 달력을 <b>손가락으로 좌우로 밀어도</b> 달이 넘어갑니다.</td></tr>
+      <tr><td class="c"><span class="n">2</span></td><td>달력. 일정은 <b>색 막대</b>로만 보입니다. 막대가 많으면 <b>+3</b>처럼 개수로 접힙니다.</td></tr>
+      <tr><td class="c"><span class="n">3</span></td><td>선택한 날짜. 아래에 그날 일정이 나오고, <span class="btn">+ 일정 추가</span> 버튼이 있습니다.</td></tr>
+      <tr><td class="c"><span class="n">4</span></td><td>탭은 화면 <b>맨 아래</b>: 달력 · 회의록 · 할 일 · 동기화 · 설정. "할 일" 옆 숫자는 안 끝난 할 일 수.</td></tr>
+    </table>
+    <h3>날짜를 눌러 그날 일정 보기</h3>
+    <figure class="phone" data-shot="m-agenda"><figcaption>27일을 누른 화면</figcaption></figure>
+    <ol class="steps">
+      <li><span class="n">1</span> 달력에서 <b>날짜를 누르면</b> 그날이 선택됩니다 (처음에는 오늘이 선택되어 있음).</li>
+      <li><span class="n">2</span> 아래에 그날 일정이 <b>시간 순으로 모두</b> 나옵니다. 일정을 누르면 수정 창이 열립니다. "11/26 15:00에서 연기", "취소" 같은 표시도 여기서 보입니다.</li>
+      <li><span class="n">3</span> <span class="btn">+ 일정 추가</span>로 그날 일정을 만듭니다.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ================================================================== 일정 추가·수정 -->
+<section>
+  <h2>일정 추가·수정</h2>
+  <h3>일정 추가</h3>
+  <div data-for="pc">
+    <p>달력에서 일정을 넣을 <b>날짜 칸의 빈 곳</b>을 누르면 "일정 추가" 창이 열립니다.</p>
+    <figure class="half" data-shot="event-add"><figcaption>일정 추가 창</figcaption></figure>
+  </div>
+  <div data-for="mobile">
+    <p>날짜를 누르고 <span class="btn">+ 일정 추가</span>를 누르면 입력 창이 <b>아래에서 올라옵니다</b>. 아래쪽 항목은 창을 위로 밀어 올려서 봅니다.</p>
+    <div class="row2">
+      <figure class="phone" data-shot="m-add"><figcaption>입력 창 위쪽</figcaption></figure>
+      <figure class="phone" data-shot="m-add-bottom"><figcaption>입력 창 아래쪽 (밀어 올린 모습)</figcaption></figure>
+    </div>
+  </div>
+  <ol class="steps">
+    <li><span class="n">1</span> <b>제목</b> — 꼭 입력합니다.</li>
+    <li><span class="n">2</span> <b>시작일 · 종료일</b> — 고른 날짜가 들어가 있습니다. 하루 일정이면 그대로 두고, <b>여러 날</b>이면 종료일에 마지막 날을 고릅니다 (아래 '여러 날 일정').</li>
+    <li><span class="n">3</span> <b>시작·종료 시간</b> — 30분 단위로 고릅니다. 비워 두면 <b>종일</b> 일정입니다. 종료가 시작보다 빠르면 저장되지 않습니다.</li>
+    <li><span class="n">4</span> <b>메모</b> — 장소, 준비물 등 (선택).</li>
+    <li><span class="n">5</span> <b>막대 색상</b> — 일정 종류별로 색을 정해 두면 한눈에 구분됩니다. "기본"은 화면 디자인 색을 따릅니다.</li>
+    <li><span class="n">6</span> <span class="btn">저장</span>을 누르면 달력에 막대가 생깁니다.</li>
+  </ol>
+
+  <h3>여러 날 일정</h3>
+  <p>출장·교육처럼 며칠에 걸친 일정은 <b>종료일</b>에 마지막 날을 고르면 하나의 일정으로 등록됩니다. 시작 시간은 첫날, 종료 시간은 마지막 날 기준입니다 (창에 "3일 일정 — …" 안내가 나옵니다). 최대 93일까지 됩니다.</p>
+  <div data-for="pc">
+    <figure data-shot="event-multi"><figcaption>11/16~11/18 '신입 교육 과정' — 걸친 날마다 막대가 보입니다</figcaption></figure>
+    <p><span class="n">1</span> 첫날: 시작 시간과 제목 뒤에 <b>▸</b> &nbsp; <span class="n">2</span> 가운데 날: <b>↳ 제목</b> &nbsp; <span class="n">3</span> 마지막 날: <b>↳ 제목 ~종료 시간</b>.
+    어느 날의 막대를 눌러도 같은 일정이 열립니다. 시작일을 옮기면 종료일도 같은 일수만큼 따라 옮겨집니다.
+    (<span class="n">4</span>의 <b>🔁</b>는 아래 '반복 일정' 표시입니다.)</p>
+  </div>
+  <div data-for="mobile">
+    <figure class="phone" data-shot="m-multi"><figcaption>여러 날 일정의 가운데 날(17일)을 누른 화면</figcaption></figure>
+    <p><span class="n">1</span> 걸친 날마다 막대가 보입니다. <span class="n">2</span> 어느 날을 눌러도 목록에 <b>"11/16 13:00 ~ 11/18 17:00"</b>처럼 전체 기간과 <b>"2/3일째"</b>가 나옵니다. 누르면 같은 일정이 열립니다.</p>
+  </div>
+
+  <h3>반복 일정</h3>
+  <p>매주 회의처럼 되풀이되는 일정은 새로 만들 때 <b>반복</b>을 고르면 한 번에 등록됩니다.</p>
+  <figure data-for="pc" class="half" data-shot="event-repeat"><figcaption>매주 화·목, 1월 28일까지 반복</figcaption></figure>
+  <figure data-for="mobile" class="phone" data-shot="m-repeat"><figcaption>매주 수·금 반복 (창을 밀어 올린 모습)</figcaption></figure>
+  <ol class="steps">
+    <li><span class="n">1</span> <b>반복 종류</b>를 누릅니다: 안 함 / 매일 / 매주 / 매월 / 매년.</li>
+    <li><span class="n">2</span> <b>매주</b>면 반복할 <b>요일을 여러 개</b> 고를 수 있습니다. 처음에는 시작일의 요일이 골라져 있습니다. 다시 누르면 빠집니다.</li>
+    <li><span class="n">3</span> <span class="btn">평일(월~금)</span>은 월~금을 한 번에 고릅니다. 오른쪽에서 <b>매주 / 2주마다</b>를 고릅니다.</li>
+    <li><span class="n">4</span> <b>반복 종료일</b>을 정합니다 (처음에는 3개월 뒤로 들어가 있음).</li>
+    <li><span class="n">5</span> <b>"🔁 매주 화·목 · 총 19회 · 첫 회차 ~ 마지막 회차"</b>처럼 몇 번 만들어지는지 미리 보입니다. 확인하고 <span class="btn">저장</span>합니다.</li>
+  </ol>
+  <h3>매월 반복</h3>
+  <figure data-for="pc" class="half" data-shot="event-repeat-monthly"><figcaption>매월 반복 — 일자 또는 몇째 주 무슨 요일</figcaption></figure>
+  <figure data-for="mobile" class="phone" data-shot="m-repeat-monthly"><figcaption>매월 반복 설정</figcaption></figure>
+  <ul>
+    <li><span class="n">1</span> <b>매월 ○일</b> — 예: 매월 18일. 31일처럼 그 날짜가 없는 달은 건너뜁니다.</li>
+    <li><span class="n">2</span> <b>매월 ○째 주 ○요일</b> — 예: 매월 4째 주 수요일. 처음에는 시작일에 맞춰 골라져 있습니다.</li>
+    <li><span class="n">3</span> 미리보기로 회차 수와 날짜를 확인합니다.</li>
+  </ul>
+  <ul>
+    <li>회차마다 일정이 따로 만들어지므로, 회차별로 <b>종료·취소·연기·회의록 작성</b>을 따로 할 수 있습니다. 달력의 반복 일정에는 <b>🔁</b>가 붙습니다.</li>
+    <li>첫 회차는 시작일부터 따져서 조건에 맞는 첫날입니다. 예를 들어 목요일에 시작해 "매주 화"만 고르면 다음 주 화요일이 첫 회차입니다.</li>
+    <li>한 번에 최대 366회까지 만들 수 있습니다. 반복은 <b>새 일정을 만들 때</b> 정하며, 이미 만든 반복의 규칙을 바꾸려면 아래처럼 이후 회차를 지우고 새로 등록하세요.</li>
+  </ul>
+
+  <h3>반복 일정 고치기·지우기</h3>
+  <figure data-for="pc" class="half" data-shot="event-series"><figcaption>반복 일정의 한 회차를 연 화면</figcaption></figure>
+  <figure data-for="mobile" class="phone" data-shot="m-series"><figcaption>반복 일정의 한 회차를 연 화면</figcaption></figure>
+  <ol class="steps">
+    <li><span class="n">1</span> 반복 규칙과 <b>"전체 9회 중 5번째"</b>처럼 몇 번째 회차인지 보입니다.</li>
+    <li><span class="n">2</span> <b>적용 범위</b>를 고릅니다.
+      <ul>
+        <li><b>이 일정만</b> (기본) — 이 회차만 고치거나 지웁니다. 날짜를 옮기면 이 회차만 연기됩니다.</li>
+        <li><b>이 일정과 이후 일정 모두</b> — 제목·시간·메모·색을 이후 회차에도 똑같이 적용합니다. 각 회차의 날짜는 그대로입니다.</li>
+      </ul></li>
+    <li><span class="btn">저장</span> 또는 <span data-for="pc"><span class="n">3</span> </span><span class="btn">삭제</span>를 누릅니다. "이후 모두"로 삭제하면 몇 건을 지우는지 먼저 물어봅니다.</li>
+  </ol>
+
+  <h3>일정 수정과 상태 바꾸기</h3>
+  <div data-for="pc">
+    <p>달력의 <b>일정 막대</b>를 누르면 "일정 수정" 창이 열립니다. 아래쪽 버튼으로 일정의 상태를 바꿉니다.</p>
+    <figure class="half" data-shot="event-edit"><figcaption>일정 수정 창</figcaption></figure>
+  </div>
+  <div data-for="mobile">
+    <p>날짜 아래 목록에서 <b>일정을 누르면</b> "일정 수정" 창이 올라옵니다. <span class="n">1</span>은 창 위쪽에, <span class="n">2</span>~<span class="n">6</span>은 창을 밀어 올리면 맨 아래에 있습니다.</p>
+    <div class="row2">
+      <figure class="phone" data-shot="m-edit-top"><figcaption>수정 창 위쪽</figcaption></figure>
+      <figure class="phone" data-shot="m-edit"><figcaption>수정 창 아래쪽</figcaption></figure>
+    </div>
+  </div>
+  <table>
+    <tr><th class="c">번호</th><th style="width:30%">버튼</th><th>언제 쓰나요</th></tr>
+    <tr><td class="c"><span class="n">1</span></td><td>연기로 기록 (체크)</td><td>날짜·시간을 바꿀 때 원래 자리에 흔적을 남길지. 기본은 켜짐 → '취소와 연기' 장</td></tr>
+    <tr><td class="c"><span class="n">2</span></td><td><span class="btn">📝 회의록 작성</span></td><td>이 일정의 회의록을 바로 만듭니다 → '회의록 작성' 장</td></tr>
+    <tr><td class="c"><span class="n">3</span></td><td><span class="btn">삭제</span></td><td><b>잘못 입력한</b> 일정. 화면에서 사라집니다.</td></tr>
+    <tr><td class="c"><span class="n">4</span></td><td><span class="btn">✔ 종료 처리</span></td><td>실제로 <b>진행된</b> 일정을 끝난 것으로 표시. 다시 누르면 되돌아갑니다.</td></tr>
+    <tr><td class="c"><span class="n">5</span></td><td><span class="btn">✕ 취소 처리</span></td><td>잡혀 있다가 <b>없어진</b> 일정. 지우지 않고 기록으로 남깁니다.</td></tr>
+    <tr><td class="c"><span class="n">6</span></td><td><span class="btn">저장</span></td><td>제목·시간·메모·색 등 고친 내용을 저장</td></tr>
+  </table>
+  <div class="box tip"><b>끝난 일정을 한꺼번에 종료하기</b> — 달력 위 <span class="btn">✔ 지난 일정 종료</span>를 누르면 시간이 지난 일정을 모두 종료 처리합니다. 몇 건인지 먼저 물어보며, 취소된 일정은 건드리지 않습니다.</div>
+</section>
+
+<!-- ================================================================== 취소와 연기 -->
+<section>
+  <h2>취소와 연기</h2>
+  <h3>삭제 · 취소 · 종료 · 연기 구분</h3>
+  <table>
+    <tr><th style="width:14%">구분</th><th style="width:34%">언제</th><th>표시</th></tr>
+    <tr><td><b>종료</b></td><td>회의가 실제로 열렸을 때</td><td>✔ + 흐린 취소선</td></tr>
+    <tr><td><b>취소</b></td><td>잡혀 있던 회의가 없어졌을 때</td><td>✕ + 취소선 + 회색 (기록이 남음)</td></tr>
+    <tr><td><b>연기</b></td><td>다른 날짜·시간으로 옮겨졌을 때</td><td>원래 자리에 취소선 "→ 새 날짜", 새 자리에 ↪</td></tr>
+    <tr><td><b>삭제</b></td><td>잘못 입력했을 때</td><td>완전히 사라짐</td></tr>
+  </table>
+  <h3>일정 취소하기</h3>
+  <ol class="steps">
+    <li>일정을 눌러 수정 창을 열고 <span class="btn">✕ 취소 처리</span>를 누릅니다.</li>
+    <li>취소 사유를 입력합니다 (예: "상대측 일정 변경"). 비워도 됩니다. 입력 창에서 <span class="btn">취소</span>를 누르면 아무것도 바뀌지 않습니다.</li>
+    <li>연결된 회의록이 있으면 "회의록도 '취소된 회의'로 표시할까요?"라고 묻습니다. 보통 <span class="btn">확인</span>을 누르세요.</li>
+  </ol>
+  <figure data-for="pc" class="half" data-shot="cancelled-modal"><figcaption>취소된 일정을 다시 열었을 때</figcaption></figure>
+  <div data-for="mobile" class="row2">
+    <figure class="phone" data-shot="m-cancelled"><figcaption>취소된 일정 — 창 위쪽</figcaption></figure>
+    <figure class="phone" data-shot="m-cancelled-bottom"><figcaption>창 아래쪽</figcaption></figure>
+  </div>
+  <p><span class="n">1</span> 제목 옆에 <b>✕ 취소됨</b>, <span class="n">2</span> 입력한 <b>취소 사유</b>가 보입니다. 취소를 되돌리려면 <span class="n">3</span> <span class="btn">↺ 취소 해제</span>를 누릅니다.</p>
+  <h3>일정 연기하기</h3>
+  <ol class="steps">
+    <li>일정을 눌러 수정 창을 엽니다.</li>
+    <li><b>날짜나 시작 시간</b>을 새 값으로 바꿉니다.</li>
+    <li>"날짜·시작 시간을 바꾸면 <b>연기</b>로 기록"이 체크된 상태(기본)로 <span class="btn">저장</span>합니다.</li>
+  </ol>
+  <p data-for="pc">달력의 원래 자리에는 <i class="strike">15:00 디자인 리뷰 → 11/27</i>, 새 자리에는 <b>↪ 15:00 디자인 리뷰</b>가 표시됩니다('화면 둘러보기'의 막대 모양 <span class="n">4</span> <span class="n">5</span>).</p>
+  <p data-for="mobile">새 날짜의 목록에는 <b>"11/26 15:00에서 연기"</b>, 원래 날짜의 목록에는 <b>"→ 11/27 연기"</b>가 표시됩니다('화면 둘러보기'의 날짜 목록 그림).</p>
+  <figure data-for="pc" class="half" data-shot="moved-modal"><figcaption>연기된 일정을 다시 열었을 때</figcaption></figure>
+  <figure data-for="mobile" class="phone" data-shot="m-moved"><figcaption>연기된 일정을 다시 열었을 때</figcaption></figure>
+  <ul>
+    <li><span class="n">1</span> 원래 일정과 지금 일정이 함께 보입니다.</li>
+    <li><span class="n">2</span> <span class="btn">연기 표시 지우기</span> — 원래 자리의 흔적만 없앱니다.</li>
+    <li><span class="n">3</span> 단순히 <b>입력 실수를 고칠 때</b>는 이 체크를 끄고 저장하세요. 연기로 기록되지 않습니다.</li>
+    <li>원래 날짜·시간으로 다시 돌려놓으면 연기 표시가 저절로 사라집니다.</li>
+  </ul>
+</section>
+
+<!-- ================================================================== 회의록 -->
+<section>
+  <h2>회의록 작성</h2>
+  <h3>방법 ① 일정에서 바로 만들기 (권장)</h3>
+  <ol class="steps">
+    <li>회의 일정을 눌러 수정 창을 열고 <span class="btn">📝 회의록 작성</span>을 누릅니다 ('일정 추가·수정' 장의 <span class="n">2</span>).</li>
+    <li><b>일자·시간·주제가 채워지고 일정과 연결된</b> 회의록 창이 열립니다.</li>
+  </ol>
+  <figure data-for="pc" class="half" data-shot="mt-prefill"><figcaption>일정에서 만든 회의록 — 내용이 미리 채워져 있습니다</figcaption></figure>
+  <figure data-for="mobile" class="phone" data-shot="m-mt-prefill"><figcaption>일정에서 만든 회의록</figcaption></figure>
+  <p><span class="n">1</span> 일자, <span class="n">2</span> 시간, <span class="n">4</span> 주제가 일정에서 그대로 옮겨지고, <span class="n">3</span> <b>연결된 일정</b>에 그 일정이 선택되어 있습니다. 확인 사항과 할 일을 적고 <span class="btn">저장</span>하면 그 일정 옆에 <b>📝</b>가 붙습니다. 다음에 같은 일정을 열면 버튼이 <span class="btn">📝 회의록 열기</span>로 바뀝니다.</p>
+  <h3>방법 ② 회의록 탭에서 만들기</h3>
+  <figure data-for="pc" data-shot="mt-list"><figcaption>회의록 탭 — 최신 회의가 맨 위</figcaption></figure>
+  <figure data-for="mobile" class="phone" data-shot="m-mt-list"><figcaption>회의록 탭 — 카드로 보입니다</figcaption></figure>
+  <table data-for="pc">
+    <tr><th class="c">번호</th><th>설명</th></tr>
+    <tr><td class="c"><span class="n">1</span></td><td><b>검색</b> — 주제, 확인 사항, 비고, 할 일 내용, 담당자를 모두 찾습니다.</td></tr>
+    <tr><td class="c"><span class="n">2</span></td><td><span class="btn">+ 회의 추가</span> — 일자를 고르면 "연결된 일정" 목록에 그날 일정이 나옵니다. 하나를 고르면 연결되고 주제·시간이 채워집니다.</td></tr>
+    <tr><td class="c"><span class="n">3</span></td><td>주제 옆 <b>🔗</b> — 달력 일정과 연결된 회의록. 마우스를 올리면 어느 일정인지 보입니다.</td></tr>
+    <tr><td class="c"><span class="n">4</span></td><td><b>할 일 요약</b> — ☐ 아직 안 함 / ☑ 끝남 / <span style="color:#c4382f">빨강</span> 기한 지남.</td></tr>
+    <tr><td class="c"><span class="n">5</span></td><td><span class="btn">✎</span> 회의록 열어서 고치기.</td></tr>
+  </table>
+  <table data-for="mobile">
+    <tr><th class="c">번호</th><th>설명</th></tr>
+    <tr><td class="c"><span class="n">1</span></td><td><span class="btn">+ 회의 추가</span> — 일자를 고르면 "연결된 일정" 목록에 그날 일정이 나옵니다.</td></tr>
+    <tr><td class="c"><span class="n">2</span></td><td><b>검색</b> — 주제, 확인 사항, 비고, 할 일 내용, 담당자를 모두 찾습니다.</td></tr>
+    <tr><td class="c"><span class="n">3</span></td><td>주제 옆 <b>🔗</b> — 달력 일정과 연결된 회의록.</td></tr>
+    <tr><td class="c"><span class="n">4</span></td><td><b>할 일 요약</b> — ☐ 아직 안 함 / ☑ 끝남 / <span style="color:#c4382f">빨강</span> 기한 지남.</td></tr>
+    <tr><td class="c"><span class="n">5</span></td><td>카드 오른쪽 위 <span class="btn">✎</span> — 회의록 열어서 고치기.</td></tr>
+  </table>
+  <div class="box tip"><b>열리지 않은 회의</b>는 지우지 말고 회의록 창 아래의 <b>"취소된 회의"</b>에 체크하세요. 목록에 취소선으로 남고, 그 회의의 할 일은 '할 일' 모아보기에서 빠집니다.</div>
+</section>
+
+<!-- ================================================================== 할 일 -->
+<section>
+  <h2>할 일 (액션아이템)</h2>
+  <p>회의에서 정한 <b>할 일 · 담당자 · 기한</b>을 회의록마다 적어 두고, <span class="btn">✅ 할 일</span> 탭에서 모아 보며 끝난 것을 체크합니다.</p>
+  <h3>회의록에서 할 일 적기</h3>
+  <figure data-for="pc" class="half" data-shot="mt-actions"><figcaption>회의록 창의 액션아이템 칸</figcaption></figure>
+  <figure data-for="mobile" class="phone" data-shot="m-mt-actions"><figcaption>회의록 창의 액션아이템 칸 (창을 밀어 올린 모습)</figcaption></figure>
+  <ol class="steps">
+    <li><span class="n">2</span> <span class="btn">+ 액션아이템 추가</span>를 누릅니다.</li>
+    <li><span class="n">1</span> 새 줄에 <b>할 일 · 담당자 · 기한</b>을 적습니다. 담당자는 전에 쓴 이름이 자동으로 제안됩니다. 줄 앞 체크는 "끝남", 줄 끝 <span class="btn">✕</span>는 그 줄 삭제입니다.</li>
+    <li><span class="btn">저장</span>합니다. 할 일 칸을 비운 줄은 저장할 때 저절로 빠집니다.</li>
+  </ol>
+  <p data-for="pc"><span class="n">3</span> 회의가 열리지 않았다면 "취소된 회의"에 체크합니다.</p>
+  <h3>할 일 탭에서 모아 보기</h3>
+  <figure data-for="pc" data-shot="act-tab"><figcaption>할 일 탭</figcaption></figure>
+  <figure data-for="mobile" class="phone" data-shot="m-act"><figcaption>할 일 탭</figcaption></figure>
+  <table>
+    <tr><th class="c">번호</th><th>설명</th></tr>
+    <tr><td class="c"><span class="n">1</span></td><td>탭 이름 옆 숫자 = 아직 안 끝난 할 일 수</td></tr>
+    <tr><td class="c"><span class="n">2</span></td><td><b>담당자</b>별로 골라 보기</td></tr>
+    <tr><td class="c"><span class="n">3</span></td><td><b>미완료만 / 전체 / 완료만</b></td></tr>
+    <tr><td class="c"><span class="n">4</span></td><td><span style="color:#c4382f"><b>빨간 기한 (지남)</b></span> = 기한이 지났는데 안 끝난 일. 기한이 빠른 순으로 위에 옵니다.</td></tr>
+    <tr><td class="c"><span class="n">5</span></td><td>체크하면 바로 <b>완료</b>. "미완료만"에서는 목록에서 빠집니다.</td></tr>
+    <tr><td class="c"><span class="n">6</span></td><td>📝 회의 이름을 누르면 그 회의록이 열립니다.</td></tr>
+  </table>
+</section>
+
+<!-- ================================================================== 동기화 -->
+<section>
+  <h2>다른 기기와 동기화</h2>
+  <p>서버 없이 <b>바뀐 내용 묶음(패치)</b>을 직접 옮겨 기기끼리 맞춥니다. 방향마다 <b>보내는 기기에서 내보내기 → 받는 기기에서 가져오기</b>를 한 번씩 합니다.</p>
+
+  <div data-for="pc">
+    <table>
+      <tr><th style="width:25%">방법</th><th>언제</th></tr>
+      <tr><td><b>📄 파일</b></td><td>이메일 등으로 파일을 반입·반출할 수 있을 때. <b>가장 확실합니다.</b></td></tr>
+      <tr><td><b>📷 QR</b></td><td>파일을 옮기기 어려울 때. 휴대폰 카메라로 화면의 QR을 찍어 옮깁니다.</td></tr>
+    </table>
+    <h3>내보내기 (보내는 PC)</h3>
+    <figure data-shot="sync-export"><figcaption>동기화 탭 — 내보내기</figcaption></figure>
+    <ol class="steps">
+      <li><span class="btn">🔄 동기화</span> 탭을 엽니다.</li>
+      <li><span class="n">1</span> <b>기간</b> — 기본은 보고 있는 달부터 다음 달까지. <span class="btn">기간=전체</span>는 날짜 제한 없음.</li>
+      <li><span class="n">2</span> <b>마지막 전송 이후 변경분만</b> (기본 체크) — 지난번 "전송 완료" 이후 바뀐 것만 보냅니다. 처음이거나 전부 다시 보낼 때는 체크를 끄세요.</li>
+      <li><span class="n">3</span> 보낼 건수를 확인하고, <span class="n">4</span> <span class="btn">📄 파일로 내보내기</span> 또는 <span class="n">5</span> <span class="btn">📷 QR로 내보내기</span>를 누릅니다.</li>
+      <li>끝나면 "<b>전송 완료로 표시할까요?</b>"라고 묻습니다. 상대가 잘 받은 게 확실하면 <span class="btn">확인</span>, 아니면 <span class="btn">취소</span>(같은 내용을 다시 보낼 수 있음).</li>
+    </ol>
+    <h3>QR로 보낼 때</h3>
+    <figure class="half" data-shot="qr-one"><figcaption>QR을 한 장씩 크게 보여 주는 화면</figcaption></figure>
+    <ol class="steps">
+      <li><span class="n">1</span> <b>한 장씩 크게</b> 화면에서 QR이 하나씩 나옵니다. <span class="n">2</span> 지금 몇 번째인지 보입니다.</li>
+      <li>휴대폰 <b>카메라 앱</b>으로 QR이 <b>화면에 꽉 차게, 정면에서</b> 찍습니다. 모니터 밝기를 높이고 마우스 커서는 QR 밖으로 치우세요.</li>
+      <li><span class="n">3</span> <span class="btn">다음 ▶</span>(또는 키보드 → 키)로 넘기며 <b>마지막 번호까지 모두</b> 찍습니다.</li>
+      <li>찍은 사진을 받는 기기로 옮깁니다 (조직에서 허용된 방법으로). 받는 기기가 그 휴대폰이면 옮길 필요 없이 바로 가져오면 됩니다.</li>
+    </ol>
+    <h3>가져오기 (받는 PC)</h3>
+    <figure data-shot="sync-import"><figcaption>동기화 탭 — 가져오기</figcaption></figure>
+    <ul>
+      <li><span class="n">1</span> <span class="btn">🖼 QR 사진으로 가져오기</span> — 찍은 사진을 <b>모두 한꺼번에</b> 고릅니다 (Ctrl·Shift를 누른 채 클릭).</li>
+      <li><span class="n">2</span> <span class="btn">📄 패치 파일 열기</span> — 받은 .json 파일을 고릅니다. 바로 미리보기가 열립니다.</li>
+    </ul>
+    <h3>QR 사진 일부를 못 읽었을 때</h3>
+    <figure class="half" data-shot="import-progress"><figcaption>사진 분석 결과 — 2번과 7번을 못 읽은 경우</figcaption></figure>
+    <ol class="steps">
+      <li><span class="n">1</span> 사진을 분석하는 동안 진행 막대가 찹니다.</li>
+      <li><span class="n">2</span> 번호 칸: <b style="color:#1f8a5b">초록</b> = 읽음, <b style="color:#c4382f">빨강</b> = 못 읽음.</li>
+      <li><span class="n">3</span> <b>못 읽은 QR 번호</b>가 표시됩니다. <span class="n">4</span> 사진마다 어떤 번호를 읽었는지도 나옵니다.</li>
+      <li>보내는 PC에서 <b>그 번호의 QR만</b> 다시 찍어 <span class="n">5</span> <span class="btn">🖼 사진 더 추가</span>로 고릅니다. 이미 읽은 번호는 그대로 남습니다.</li>
+      <li>모든 번호를 읽으면 미리보기가 자동으로 열립니다.</li>
+    </ol>
+    <h3>미리보기에서 확인하고 적용하기</h3>
+    <figure class="half" data-shot="import-review"><figcaption>가져오기 미리보기</figcaption></figure>
+    <ol class="steps">
+      <li><span class="n">1</span> 적용할 건수를 확인합니다. <span class="btn">전체선택</span> / <span class="btn">해제</span>로 한 번에 고를 수 있습니다.</li>
+      <li>항목마다 붙은 표시를 봅니다 (아래 표). <span class="n">2</span> <span class="tag t-add">추가</span>는 새 항목, <span class="n">3</span> <span class="tag t-cf">양쪽수정</span>은 두 기기에서 모두 고친 항목입니다.</li>
+      <li>목록 맨 아래의 <span class="n">4</span> <span class="btn">선택 적용</span>을 누르면 "N건을 반영했습니다"가 나오고, 위쪽 "마지막 동기화" 시각이 바뀝니다.</li>
+    </ol>
+  </div>
+
+  <div data-for="mobile">
+    <table>
+      <tr><th style="width:30%">방향</th><th>방법</th></tr>
+      <tr><td><b>PC → 휴대폰</b></td><td>PC에서 QR을 띄우고 → 휴대폰 <b>카메라 앱</b>으로 한 장씩 찍고 → 휴대폰 앱에서 <b>QR 사진으로 가져오기</b></td></tr>
+      <tr><td><b>휴대폰 → PC</b></td><td>휴대폰에서 <b>파일로 내보내기</b> → 메일·메신저 '나에게' 등으로 PC에 옮김 → PC에서 <b>패치 파일 열기</b></td></tr>
+    </table>
+    <h3>PC에서 받기 (QR 사진)</h3>
+    <ol class="steps">
+      <li>PC에서 <span class="btn">📷 QR로 내보내기</span>를 누르면 QR이 한 장씩 크게 나옵니다 (PC판 매뉴얼 참고).</li>
+      <li>휴대폰 <b>카메라 앱</b>으로 QR이 <b>화면에 꽉 차게, 정면에서</b> 한 장씩 모두 찍습니다. PC 화면의 번호(예: 3 / 7)를 보며 빠짐없이 찍으세요.</li>
+      <li>휴대폰 앱의 <span class="btn">🔄 동기화</span> 탭에서 <span class="n">1</span> <span class="btn">🖼 QR 사진으로 가져오기</span>를 누르고, 찍은 사진을 <b>모두</b> 고릅니다.</li>
+    </ol>
+    <figure class="phone" data-shot="m-sync-import"><figcaption>동기화 탭 — 가져오기</figcaption></figure>
+    <h3>QR 사진 일부를 못 읽었을 때</h3>
+    <figure class="phone" data-shot="m-import-progress"><figcaption>사진 분석 결과 — 2번과 7번을 못 읽은 경우</figcaption></figure>
+    <ol class="steps">
+      <li><span class="n">1</span> 번호 칸: <b style="color:#1f8a5b">초록</b> = 읽음, <b style="color:#c4382f">빨강</b> = 못 읽음.</li>
+      <li><span class="n">2</span> <b>못 읽은 QR 번호</b>가 표시됩니다.</li>
+      <li>PC 화면에서 <b>그 번호의 QR만</b> 다시 찍어 <span class="n">3</span> <span class="btn">🖼 사진 더 추가</span>로 고릅니다. 이미 읽은 번호는 그대로 남습니다.</li>
+      <li>모든 번호를 읽으면 미리보기가 자동으로 열립니다.</li>
+    </ol>
+    <h3>미리보기에서 확인하고 적용하기</h3>
+    <div class="row2">
+      <figure class="phone" data-shot="m-import-review"><figcaption>가져오기 미리보기</figcaption></figure>
+      <figure class="phone" data-shot="m-import-apply"><figcaption>맨 아래의 적용 버튼</figcaption></figure>
+    </div>
+    <ol class="steps">
+      <li><span class="n">1</span> 적용할 건수를 확인합니다. <span class="n">2</span> 항목마다 붙은 표시를 봅니다 (아래 표).</li>
+      <li>창을 맨 아래까지 밀어 올려 <span class="n">3</span> <span class="btn">선택 적용</span>을 누릅니다.</li>
+    </ol>
+    <h3>PC로 보내기 (파일)</h3>
+    <figure class="phone" data-shot="m-sync-export"><figcaption>동기화 탭 — 내보내기</figcaption></figure>
+    <ol class="steps">
+      <li><span class="n">1</span> 기간과 <span class="n">2</span> "마지막 전송 이후 변경분만"을 확인합니다. 처음 보내거나 전부 다시 보낼 때는 체크를 끄세요.</li>
+      <li>화면을 내려 <span class="n">3</span> <span class="btn">📄 파일로 내보내기</span>를 누르면 작은 .json 파일이 저장됩니다.</li>
+      <li>그 파일을 메일·메신저 '나에게 보내기' 등으로 PC에 옮기고, PC에서 <span class="btn">📄 패치 파일 열기</span>로 엽니다.</li>
+      <li>"<b>전송 완료로 표시할까요?</b>" — PC가 잘 받은 게 확실하면 <span class="btn">확인</span>, 아니면 <span class="btn">취소</span>.</li>
+    </ol>
+  </div>
+
+  <table>
+    <tr><th style="width:22%">표시</th><th>뜻</th><th style="width:28%">권장</th></tr>
+    <tr><td><span class="tag t-add">추가</span></td><td>이 기기에 없는 새 항목</td><td>적용</td></tr>
+    <tr><td><span class="tag t-upd">수정</span></td><td>상대 기기에서 더 최근에 고친 항목</td><td>적용</td></tr>
+    <tr><td><span class="tag t-del">삭제</span></td><td>상대 기기에서 지운 항목</td><td>적용</td></tr>
+    <tr><td><span class="tag t-cf">양쪽수정</span></td><td>마지막 동기화 뒤 <b>두 기기 모두에서</b> 고친 항목. 적용하면 이 기기 내용을 덮어씁니다.</td><td>"로컬:" 내용과 비교 후 선택</td></tr>
+    <tr><td><span class="tag t-skip">동일</span> <span class="tag t-skip">로컬최신</span></td><td>바꿀 게 없거나 이 기기가 더 최신</td><td>자동으로 빠짐</td></tr>
+  </table>
+  <div class="box tip"><b>양쪽수정을 줄이는 습관</b><br>
+    · 한쪽에서 작업을 마치면 바로 내보내고, 다른 기기에서는 <b>작업 전에 먼저 가져오기</b>를 합니다.<br>
+    · 기기들의 <b>날짜·시각</b>이 맞는지 가끔 확인하세요. 어느 쪽이 최신인지 수정 시각으로 판단합니다.<br>
+    · 미리보기에 "<b>구버전(v1) 앱에서 보낸 패치</b>" 경고가 뜨면 보낸 기기도 새 버전으로 바꿔 주세요. 이 기기의 취소·연기·할 일 정보는 지워지지 않습니다.</div>
+</section>
+
+<!-- ================================================================== 백업·설정 -->
+<section>
+  <h2>백업·엑셀·설정</h2>
+  <div data-for="pc">
+    <h3>백업과 엑셀</h3>
+    <figure data-shot="backup"><figcaption>⚙ 설정 탭 — 데이터 백업 / 복원</figcaption></figure>
+  </div>
+  <div data-for="mobile">
+    <figure class="phone" data-shot="m-backup"><figcaption>⚙ 설정 탭 — 백업 / 복원 (화면을 내린 모습)</figcaption></figure>
+  </div>
+  <table>
+    <tr><th class="c">번호</th><th style="width:30%">버튼</th><th>설명</th></tr>
+    <tr><td class="c"><span class="n">1</span></td><td>⬇ 엑셀(CSV) 내보내기</td><td><b>일정 · 회의록 · 할 일</b> 파일 3개를 저장합니다. 엑셀에서 바로 열립니다. "여러 파일 다운로드 허용"을 물으면 허용하세요.</td></tr>
+    <tr><td class="c"><span class="n">2</span></td><td>⬇ 전체 백업(JSON)</td><td>이 기기의 모든 데이터를 파일 하나로 저장합니다. <b>정기적으로</b> 해 두세요.</td></tr>
+    <tr><td class="c"><span class="n">3</span></td><td>⬆ 백업 복원</td><td>백업 파일로 지금 데이터를 <b>통째로 바꿉니다</b> (합치기 아님). 두 기기를 합치려면 '다른 기기와 동기화'를 쓰세요.</td></tr>
+    <tr data-for="pc"><td class="c"><span class="n">4</span></td><td>전체 데이터 삭제</td><td>이 기기의 일정·회의록을 모두 지웁니다. 되돌릴 수 없으니 먼저 백업하세요.</td></tr>
+    <tr data-for="mobile"><td class="c"><span class="n">4</span></td><td>앱 버전</td><td>휴대폰에서는 여기서 버전을 확인합니다. 그 아래에 <b>전체 데이터 삭제</b> 버튼이 있습니다.</td></tr>
+  </table>
+  <h3>화면 디자인과 기기 이름</h3>
+  <div data-for="pc">
+    <figure data-shot="design"><figcaption>화면 디자인 6종</figcaption></figure>
+    <p>카드를 누르면 바로 바뀝니다. <span class="n">1</span> 지금 쓰는 디자인에 파란 테두리가 있습니다. 이 브라우저에만 적용되고 다른 기기로 동기화되지 않습니다.</p>
+    <figure data-shot="device-label"><figcaption>기기 이름 정하기</figcaption></figure>
+    <p><span class="n">1</span> 내부 / 외부 / 직접 입력 중에서 고릅니다. 동기화 미리보기에 "보낸 기기"로 나오니 <b>기기마다 다른 이름</b>으로 정하세요.</p>
+  </div>
+  <div data-for="mobile">
+    <figure class="phone" data-shot="m-settings"><figcaption>⚙ 설정 탭 위쪽</figcaption></figure>
+    <ul>
+      <li><span class="n">1</span> <b>화면 디자인</b> — 카드를 누르면 바로 바뀝니다. 이 휴대폰에만 적용됩니다.</li>
+      <li><span class="n">2</span> <b>기기 이름</b> — "직접 입력…"을 고르고 "휴대폰"처럼 적어 두면, PC의 동기화 미리보기에서 구분하기 쉽습니다.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================== FAQ -->
+<section>
+  <h2>자주 묻는 질문</h2>
+  <dl>
+    <dt>Q. 파일을 다시 열었더니 데이터가 없어요.</dt>
+    <dd>다른 브라우저로 열었거나 브라우저 데이터가 지워졌을 수 있습니다. 평소 쓰던 브라우저로 다시 열고, 그래도 없으면 백업 복원을 하세요.</dd>
+    <dt data-for="mobile">Q. 휴대폰에서 입력한 내용이 다음에 열면 사라져요.</dt>
+    <dd data-for="mobile">메신저·메일 앱의 미리보기 화면으로 연 경우 저장되지 않을 수 있습니다. 파일을 <b>Chrome·Safari 브라우저로</b> 열어서 쓰세요.</dd>
+    <dt>Q. 사진에서 QR을 못 찾는다고 나와요.</dt>
+    <dd>QR 한 장이 화면에 꽉 차게, 정면에서, 초점이 맞게 다시 찍으세요. 모니터 밝기를 높이고 반사를 피하세요. 그래도 안 되면 파일로 보내기를 쓰세요.</dd>
+    <dt>Q. "다른 내보내기 QR"이라고 나와요.</dt>
+    <dd>서로 다른 내보내기의 QR 사진이 섞였습니다. 이번 내보내기 화면의 QR만 다시 찍어 처음부터 가져오세요.</dd>
+    <dt>Q. 내보낼 변경 내용이 없다고 나와요.</dt>
+    <dd>"마지막 전송 이후 변경분만"이 체크되어 있고 그 뒤 바뀐 게 없는 경우입니다. 다시 보내려면 체크를 끄세요.</dd>
+    <dt>Q. "전송 완료"를 눌렀는데 상대가 못 받았어요.</dt>
+    <dd>"마지막 전송 이후 변경분만" 체크를 끄고 기간을 넉넉히 잡아 다시 보내세요. 이미 받은 항목은 미리보기에서 "동일"로 나와 자동으로 빠집니다.</dd>
+    <dt>Q. 날짜를 잘못 넣어서 고쳤는데 원래 자리에 흔적이 남았어요.</dt>
+    <dd>그 일정을 열고 <span class="btn">연기 표시 지우기</span>를 누르세요. 다음부터는 고칠 때 "연기로 기록" 체크를 끄면 됩니다.</dd>
+    <dt>Q. 취소한 일정을 완전히 지우고 싶어요.</dt>
+    <dd>일정을 열고 <span class="btn">삭제</span>를 누르세요. 지운 사실도 동기화로 상대 기기에 전달됩니다.</dd>
+    <dt>Q. 일정을 지웠더니 회의록의 🔗가 사라졌어요.</dt>
+    <dd>연결된 일정이 지워지면 연결 표시만 사라지고 회의록 내용은 그대로 남습니다.</dd>
+  </dl>
+  <div class="box tip">이 매뉴얼은 앱 버전 <b>v{{APP_VER}}</b> 기준입니다. 프로그램의 버전(<span data-for="pc">화면 맨 아래</span><span data-for="mobile">설정 탭</span>)과 같은지 확인하세요.</div>
+</section>
+
+</body>
+</html>

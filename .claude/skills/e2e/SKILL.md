@@ -48,7 +48,7 @@ git diff --cached                # 무엇이 바뀌었는지
 
 ### 4. 실행
 ```bash
-e2e/run-related.sh               # 관련 spec × PC · 태블릿 · iPhone · Android (전체 ≈ 31초)
+e2e/run-related.sh               # 관련 spec × PC · 태블릿 · iPhone · Android (전체 ≈ 35초)
 ```
 - 화면 E2E 가 끝나면(통과·실패 모두) 결과 보고서가 자동으로 열린다 (`e2e/open-report.sh`, http://localhost:9324).
   - 다시 열 때는 `e2e/open-report.sh` (= `npm run test:e2e:report`). 보고서 서버가 이미 떠 있으면 브라우저만 연다. `npx playwright show-report` 를 직접 실행하지 않는다 (서버가 끝나지 않아 명령이 멈추고, 이미 떠 있으면 포트 충돌).
@@ -93,4 +93,4 @@ e2e/run-related.sh               # 관련 spec × PC · 태블릿 · iPhone · A
 - 화면 헬퍼: `openTab`, `dayCell`, `clickDay`, `chip`, `modalBox`, `readDb`(localStorage), `expectDialog`, `download`, `isMobileView`
 - confirm 에 '취소'를 눌러야 하면 `answerConfirm(false)`.
 - 요소는 앱의 `id` 를 우선 사용한다. 화면에 같은 문구가 여러 곳에 있으면(예: 미리보기 안내 문구의 `.tag.cf`) 범위를 좁힌다.
-- 번호 체계: 1 달력·일정, 2 일정 종료, 3 회의록, 4 동기화, 5 설정·백업, 6 디자인·막대 색상, 7 기기별 레이아웃(태그 필수), 8 v2 기능(취소·연기·회의록 연결·액션아이템). 새 케이스를 추가하면 `e2e/README.md` 의 케이스 목록도 고친다.
+- 번호 체계: 1 달력·일정, 2 일정 종료, 3 회의록, 4 동기화, 5 설정·백업, 6 디자인·막대 색상, 7 기기별 레이아웃(태그 필수), 8 v2 기능(취소·연기·회의록 연결·액션아이템), 9 여러 날·반복 일정. 새 케이스를 추가하면 `e2e/README.md` 의 케이스 목록도 고친다.
